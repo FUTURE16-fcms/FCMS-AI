@@ -1,0 +1,1879 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6d4aff">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<title>Naina — Smart Timetable</title>
+<script>
+(function(){
+  window.NAINA_XLSX_READY = new Promise(function(resolve,reject){
+    if(window.XLSX){ resolve(window.XLSX); return; }
+    var urls=[
+      "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
+      "https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"
+    ];
+    var i=0;
+    function loadNext(){
+      if(window.XLSX){ resolve(window.XLSX); return; }
+      if(i>=urls.length){ reject(new Error("Excel engine could not be loaded. Connect to the internet once and reopen Naina.")); return; }
+      var sc=document.createElement("script");
+      sc.src=urls[i++];
+      sc.onload=function(){ window.XLSX ? resolve(window.XLSX) : loadNext(); };
+      sc.onerror=loadNext;
+      document.head.appendChild(sc);
+    }
+    loadNext();
+  });
+})();
+</script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f5f6fb;color:#171923}
+header{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid #ddd;padding:14px 16px}
+h1{margin:0;font-size:22px}.sub{font-size:12px;color:#666;margin-top:3px}
+nav{display:flex;gap:8px;overflow:auto;padding:10px;background:#fff;position:sticky;top:69px;z-index:4}
+nav button,.btn{border:0;border-radius:12px;padding:11px 14px;background:#eee;color:#222;font-weight:650;white-space:nowrap}
+nav button.active,.primary{background:#6d4aff;color:#fff}
+main{max-width:1050px;margin:auto;padding:14px}.page{display:none}.page.active{display:block}
+.card{background:#fff;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 12px #0000000b}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+h2{font-size:18px;margin:0 0 12px}.muted{color:#666;font-size:13px}
+input,select{width:100%;padding:12px;border:1px solid #d7d9e0;border-radius:10px;font-size:15px;background:#fff}
+label{display:block;font-size:13px;font-weight:650;margin-bottom:6px}
+.big{font-size:28px;font-weight:800}.live{border-left:5px solid #16a34a}.next{border-left:5px solid #6d4aff}
+.item{padding:12px;border:1px solid #e5e6eb;border-radius:12px;margin:8px 0}
+.item strong{display:block}.tag{display:inline-block;background:#eee;border-radius:999px;padding:4px 8px;font-size:11px;margin:3px 3px 0 0}
+.ok{color:#16803b}.warn{color:#a15c00}.empty{padding:18px;text-align:center;color:#777}
+.smallbtn{padding:8px 10px;border:1px solid #ddd;border-radius:9px;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
+.scroll{overflow:auto}
+#file{display:none}
+@media(max-width:600px){main{padding:10px}.card{padding:13px}nav{top:67px}.big{font-size:23px}}
+
+/* Naina V2.9 - Universal Popup UI */
+.modal-backdrop{
+  position:fixed; inset:0; z-index:9999;
+  background:rgba(0,0,0,.48);
+  display:none; align-items:center; justify-content:center;
+  padding:14px; backdrop-filter:blur(3px);
+}
+.modal-backdrop.open{display:flex}
+.modal-card{
+  width:min(720px,100%); max-height:90vh; overflow:auto;
+  background:var(--card,#fff); color:var(--text,#172033);
+  border-radius:18px; box-shadow:0 20px 60px rgba(0,0,0,.28);
+  border:1px solid rgba(0,0,0,.08); padding:18px;
+  animation:nainaPop .16s ease-out;
+}
+.modal-card.wide{width:min(1000px,100%)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.modal-head h2{margin:0;font-size:20px}
+.modal-close{
+  width:38px;height:38px;border:0;border-radius:50%;
+  background:#eef2f7;color:#253047;font-size:24px;line-height:1;cursor:pointer;
+}
+.modal-close:active{transform:scale(.95)}
+@keyframes nainaPop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+body.modal-open{overflow:hidden}
+.popup-option{cursor:pointer}
+
+
+/* V3.1 - consistent popup lists for Home, My Timetable and all modules */
+.naina-popup-list{
+  display:grid; gap:10px; margin-top:10px;
+}
+.naina-popup-list .popup-list-item{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  width:100%; box-sizing:border-box; padding:14px 15px;
+  border:1px solid rgba(0,0,0,.09); border-radius:14px;
+  background:var(--card,#fff); cursor:pointer; text-align:left;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+.naina-popup-list .popup-list-item:active{transform:scale(.99)}
+.naina-popup-list .popup-list-item .item-main{min-width:0}
+.naina-popup-list .popup-list-item .item-title{font-weight:700}
+.naina-popup-list .popup-list-item .item-sub{font-size:12px;opacity:.72;margin-top:3px}
+.naina-popup-list .popup-list-item .item-arrow{font-size:20px;opacity:.6}
+.naina-popup-list .popup-list-section{font-weight:800;margin:16px 2px 7px}
+
+
+/* Naina V3.3 - Universal timetable selector lists */
+.naina-selector-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.naina-selector-button{
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;padding:13px 14px;border-radius:14px;border:1px solid rgba(0,0,0,.10);
+  background:var(--card,#fff);text-align:left;cursor:pointer;
+}
+.naina-selector-button .selector-label{font-weight:700}
+.naina-selector-button .selector-value{font-size:12px;opacity:.68;margin-top:2px}
+.naina-selector-button .selector-arrow{font-size:20px;opacity:.55}
+.naina-filter-summary{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
+.naina-filter-chip{padding:7px 10px;border-radius:999px;background:#eef2f7;font-size:12px}
+.naina-popup-list .popup-list-item.active{outline:2px solid currentColor}
+
+</style>
+
+<style>
+.naina-fixed-popup-filters{display:grid;grid-template-columns:1fr;gap:10px;margin:12px 0}
+.naina-fixed-popup-filters .naina-selector-button{width:100%;min-height:60px}
+</style>
+<style>
+.naina-upcoming-popup-filters{display:grid;grid-template-columns:1fr;gap:10px;margin:12px 0}
+.naina-upcoming-popup-filters .naina-selector-button{width:100%;min-height:60px}
+</style>
+
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Naina">
+<meta name="theme-color" content="#6d4aff">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.json">
+
+
+<style>
+/* Naina V5.1 - Personal Tasks and Deadline Colours */
+.naina-task-list{display:grid;gap:10px;margin-top:12px}
+.naina-task-card{
+  border:1px solid rgba(0,0,0,.09);border-radius:16px;padding:14px;
+  background:var(--card,#fff);box-shadow:0 2px 8px rgba(0,0,0,.05);
+  border-left:7px solid #94a3b8;
+}
+.naina-task-card.task-green{border-left-color:#22c55e;background:#f0fdf4}
+.naina-task-card.task-yellow{border-left-color:#eab308;background:#fefce8}
+.naina-task-card.task-orange{border-left-color:#f97316;background:#fff7ed}
+.naina-task-card.task-red{border-left-color:#ef4444;background:#fef2f2}
+.naina-task-card.task-overdue{border-left-color:#991b1b;background:#fff1f2}
+.naina-task-card.task-done{border-left-color:#16a34a;background:#f0fdf4;opacity:.9}
+.naina-task-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.naina-task-title{font-weight:800;font-size:16px}
+.naina-task-meta{font-size:12px;opacity:.72;margin-top:5px}
+.naina-task-days{font-weight:800;margin-top:9px}
+.naina-task-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+.naina-task-actions button{border:0;border-radius:10px;padding:9px 11px;cursor:pointer;font-weight:700}
+.naina-task-done-btn{background:#dcfce7;color:#166534}
+.naina-task-delete-btn{background:#fee2e2;color:#991b1b}
+.naina-task-edit-btn{background:#eef2ff;color:#3730a3}
+.naina-task-form{display:grid;gap:10px}
+.naina-task-form input,.naina-task-form textarea{
+  width:100%;box-sizing:border-box;padding:12px;border:1px solid rgba(0,0,0,.12);
+  border-radius:12px;background:#fff;font:inherit;
+}
+.naina-task-form textarea{min-height:80px;resize:vertical}
+.naina-task-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.naina-task-legend span{padding:6px 9px;border-radius:999px;font-size:11px;font-weight:700}
+.naina-task-legend .g{background:#dcfce7;color:#166534}
+.naina-task-legend .y{background:#fef9c3;color:#854d0e}
+.naina-task-legend .o{background:#ffedd5;color:#9a3412}
+.naina-task-legend .r{background:#fee2e2;color:#991b1b}
+</style>
+
+</head>
+<body>
+
+<!-- Naina V2.9 universal popup host -->
+<div id="nainaModal" class="modal-backdrop" aria-hidden="true">
+  <div id="nainaModalCard" class="modal-card" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h2 id="nainaModalTitle">Naina</h2>
+      <button class="modal-close" onclick="closeNainaPopup()" aria-label="Close">×</button>
+    </div>
+    <div id="nainaModalBody"></div>
+  </div>
+</div>
+
+<header>
+  <h1>🌸 Naina</h1>
+  <div class="sub">Smart Faculty Timetable Assistant</div>
+</header>
+<nav id="nav">
+ <button class="active" data-page="dashboard">🏠 Live</button>
+ <button data-page="my">👤 My Timetable</button>
+ <button data-page="all">📋 All Classes</button>
+ <button data-page="upcoming">⏭️ Upcoming</button>
+ <button data-page="leave">🏖️ Leave & Substitute</button>
+ <button data-page="upload">📥 Upload</button>
+ <button data-page="classstats">📊 Class Counts</button>
+ <button data-page="tasks">✅ Tasks</button>
+ <button data-page="settings">⚙️ Settings</button>
+</nav>
+<main>
+<section id="dashboard" class="page active">
+ <div class="card">
+  <h2>🟢 Classes Going On Now</h2><div class="tag">University Hours: 9:00 AM – 5:00 PM</div>
+  <div id="live"></div>
+ </div>
+ <div class="card">
+  <h2>👨‍🏫 Faculty & Room Right Now</h2>
+  <div id="facultyNow"></div>
+ </div>
+ <div class="card">
+  <h2>⏭️ My Next Classes</h2>
+  <div id="nextClasses"></div>
+ </div>
+ <div class="card">
+  <h2>✅ My Tasks & Deadlines</h2>
+  <p class="muted">Your pending work is always shown here with days remaining.</p>
+  <div id="homeTasks"></div>
+ </div>
+</section>
+
+<section id="my" class="page">
+ <div class="card">
+  <h2>👤 My Personal Timetable</h2><div class="tag">University Hours: 9:00 AM – 5:00 PM</div>
+  <div class="grid">
+   <div>
+  <label>My Faculty Name</label>
+  <input id="myName" type="hidden" value="">
+  <button type="button" id="myFacultyPopupButton" class="naina-selector-button popup-option">
+    <div>
+      <div class="selector-label">Select Faculty</div>
+      <div class="selector-value" id="myFacultyPopupValue">Dr Atul</div>
+    </div>
+    <div class="selector-arrow">›</div>
+  </button>
+</div>
+   <div><label>Day</label><select id="myDay"></select></div>
+  </div>
+  <p class="muted">Naina matches your name against the faculty names extracted from every timetable sheet.</p>
+ </div>
+ <div class="card"><div id="personal"></div></div>
+</section>
+
+
+<section id="upcoming" class="page">
+ <div class="card">
+  <h2>⏭️ All Upcoming Classes</h2>
+  <p class="muted">Shows future teaching periods from the complete imported timetable. Filter by day, teaching faculty, class/section, or room.</p>
+  <div class="naina-upcoming-popup-filters">
+   <button type="button" class="naina-selector-button" id="upDayPopup">
+    <div><div class="selector-label">Day</div><div class="selector-value" id="upDayText">All Days</div></div><div class="selector-arrow">›</div>
+   </button>
+   <button type="button" class="naina-selector-button" id="upFacultyPopup">
+    <div><div class="selector-label">Teaching Faculty</div><div class="selector-value" id="upFacultyText">All Faculty</div></div><div class="selector-arrow">›</div>
+   </button>
+   <button type="button" class="naina-selector-button" id="upCoursePopup">
+    <div><div class="selector-label">Course / Subject</div><div class="selector-value" id="upCourseText">All Courses</div></div><div class="selector-arrow">›</div>
+   </button>
+   <button type="button" class="naina-selector-button" id="upClassPopup">
+    <div><div class="selector-label">Class / Section</div><div class="selector-value" id="upClassText">All Classes</div></div><div class="selector-arrow">›</div>
+   </button>
+   <button type="button" class="naina-selector-button" id="upRoomPopup">
+    <div><div class="selector-label">Room Number</div><div class="selector-value" id="upRoomText">All Rooms</div></div><div class="selector-arrow">›</div>
+   </button>
+  </div>
+  <select id="upDay" style="display:none"><option value="all">All Days</option><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option></select>
+  <input id="upTeacher" type="hidden" value="">
+  <input id="upCourse" type="hidden" value="">
+  <input id="upSection" type="hidden" value="">
+  <input id="upRoom" type="hidden" value="">
+ </div>
+ <div class="card">
+  <div id="upcomingSummary" class="muted"></div>
+  <div id="upcomingTable" class="scroll"></div>
+ </div>
+</section>
+
+<section id="all" class="page">
+ <div class="card">
+  <h2>📋 Master Timetable by Time</h2><div class="tag">University Hours: 9:00 AM – 5:00 PM</div><p class="muted">Classes are grouped by the actual timetable period. Select a day to see every class running in each time slot.</p>
+  <div class="naina-fixed-popup-filters">
+   <button type="button" class="naina-selector-button" id="nainaDayBtn">
+    <div><div class="selector-label">Day</div><div class="selector-value" id="nainaDayText">All Days</div></div><div class="selector-arrow">›</div>
+   </button>
+   <button type="button" class="naina-selector-button" id="nainaFacultyBtn">
+    <div><div class="selector-label">Faculty Name</div><div class="selector-value" id="nainaFacultyText">All Faculty</div></div><div class="selector-arrow">›</div>
+   </button>
+   <button type="button" class="naina-selector-button" id="nainaCourseBtn">
+    <div><div class="selector-label">Course / Subject</div><div class="selector-value" id="nainaCourseText">All Courses</div></div><div class="selector-arrow">›</div>
+   </button>
+   <button type="button" class="naina-selector-button" id="nainaClassBtn">
+    <div><div class="selector-label">Class / Section</div><div class="selector-value" id="nainaClassText">All Classes</div></div><div class="selector-arrow">›</div>
+   </button>
+   <button type="button" class="naina-selector-button" id="nainaRoomBtn">
+    <div><div class="selector-label">Room Number</div><div class="selector-value" id="nainaRoomText">All Rooms</div></div><div class="selector-arrow">›</div>
+   </button>
+  </div>
+  <select id="masterDay" style="display:none"><option value="all">All Days</option><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option></select>
+  <input id="filterTeacher" type="hidden" value="">
+  <input id="filterCourse" type="hidden" value="">
+  <input id="filterSection" type="hidden" value="">
+  <input id="filterRoom" type="hidden" value="">
+ </div>
+ <div class="card"><div id="allTable" class="scroll"></div></div>
+</section>
+
+<section id="upload" class="page">
+ <div class="card">
+  <h2>📥 Upload University Timetable</h2>
+  <p>Upload the original Excel timetable (.xlsx/.xls/.csv). Naina reads the Day row, time periods, subjects, faculty names, room and section automatically. Faculty variants such as “Ms Kirti”, “Kirti Gupta” and “Ms. Kirti Gupta” are combined as “Ms Kirti Gupta”. Short forms, titles, Sir/Ma’am and punctuation differences are normalized.</p>
+  <label class="btn primary" for="file" style="display:inline-block">Choose Excel File</label>
+  <input id="file" type="file" accept=".xlsx,.xls,.csv">
+  <p id="uploadStatus" class="muted"></p>
+ </div>
+ <div class="card">
+  <h2>Detected Sheets</h2><div id="sheets"></div>
+ </div>
+</section>
+
+
+<section id="leave" class="page">
+ <div class="card">
+  <h2>🏖️ Leave & Substitute Planner</h2>
+  <p class="muted">Select your faculty name and leave date. Naina will find all your classes that day and recommend faculty who are free during each period.</p>
+  <div class="grid">
+   <div><label>Faculty going on leave</label><select id="leaveTeacher"><option value="">Select faculty</option></select></div>
+   <div><label>Leave Date</label><input id="leaveDate" type="date"></div>
+   <div><label>Course / Subject (optional)</label><select id="leaveSubject"><option value="">All courses / subjects</option></select></div>
+   <div><label>Class / Section (optional)</label><select id="leaveSection"><option value="">All classes / sections</option></select></div>
+   <div><label>Room (optional)</label><select id="leaveRoom"><option value="">All rooms</option></select></div>
+   <div><label>Time Period (optional)</label><select id="leaveTime"><option value="">All time periods</option></select></div>
+  </div>
+  <button class="btn primary" id="findSubstitutes" style="margin-top:12px">Find Substitute Teachers</button> <button class="btn" id="resetLeaveFilters" style="margin-top:12px">Reset Options</button>
+ </div>
+ <div class="card">
+  <h2>📋 Classes Requiring Substitution</h2>
+  <div id="leaveResults"><div class="empty">Select a faculty member and date.</div></div>
+ </div>
+</section>
+
+<section id="classstats" class="page">
+ <div class="card">
+  <h2>📊 Class Count Analytics</h2>
+  <p class="muted">View daily, date-wise, weekly and monthly class totals from the imported timetable.</p>
+
+  <div class="naina-stats-controls">
+   <button type="button" class="naina-selector-button" id="statsDateBtn">
+    <div><div class="selector-label">Selected Date</div><div class="selector-value" id="statsDateText">Today</div></div><div class="selector-arrow">›</div>
+   </button>
+   <button type="button" class="naina-selector-button" id="statsFacultyBtn">
+    <div><div class="selector-label">Faculty</div><div class="selector-value" id="statsFacultyText">All Faculty</div></div><div class="selector-arrow">›</div>
+   </button>
+   <button type="button" class="naina-selector-button" id="statsClassBtn">
+    <div><div class="selector-label">Class / Section</div><div class="selector-value" id="statsClassText">All Classes</div></div><div class="selector-arrow">›</div>
+   </button>
+  </div>
+
+  <div class="naina-count-cards">
+   <div class="naina-count-card"><div class="count-label">Selected Day</div><div class="count-value" id="dailyClassCount">0</div><div class="count-sub" id="dailyClassDate">—</div></div>
+   <div class="naina-count-card"><div class="count-label">Selected Week</div><div class="count-value" id="weeklyClassCount">0</div><div class="count-sub" id="weeklyClassRange">—</div></div>
+   <div class="naina-count-card"><div class="count-label">Selected Month</div><div class="count-value" id="monthlyClassCount">0</div><div class="count-sub" id="monthlyClassName">—</div></div>
+  </div>
+ </div>
+
+ <div class="card">
+  <h2>📅 Date-wise Daily Classes</h2>
+  <div id="statsDateWise"></div>
+ </div>
+
+ <div class="card">
+  <h2>📆 Weekly Class Summary</h2>
+  <div id="statsWeekly"></div>
+ </div>
+
+ <div class="card">
+  <h2>🗓️ Monthly Class Summary</h2>
+  <div id="statsMonthly"></div>
+   <div class="card" style="margin-top:12px"><h3>📋 Faculty Timetable Pattern</h3><div id="statsPattern"></div></div>
+ </div>
+</section>
+
+
+<section id="tasks" class="page">
+ <div class="card">
+  <h2>✅ Personal Tasks</h2>
+  <p class="muted">Add your own work, set a deadline and mark it Done when completed.</p>
+  <div class="naina-task-form">
+   <input id="taskTitle" placeholder="Task / Work name" maxlength="160">
+   <input id="taskDeadline" type="date">
+   <textarea id="taskNote" placeholder="Optional note / details"></textarea>
+   <button class="btn primary" id="addTaskBtn">➕ Add Task</button>
+  </div>
+  <div class="naina-task-legend">
+   <span class="g">Green: 30+ days</span>
+   <span class="y">Yellow: 20–29 days</span>
+   <span class="o">Orange: 6–19 days</span>
+   <span class="r">Red: 0–5 days</span>
+  </div>
+ </div>
+ <div class="card">
+  <h2>📋 My Task List</h2>
+  <div id="taskList"></div>
+ </div>
+</section>
+
+<section id="settings" class="page">
+
+ <div class="card" id="installNainaCard">
+  <h2>📱 Install Naina on Phone</h2>
+  <p class="muted">Install Naina as an app icon on your mobile home screen.</p>
+  <button class="btn primary" id="installNainaBtn">➕ Add Naina to Home Screen</button>
+  <p class="muted" id="installNainaStatus"></p>
+ </div>
+
+ <div class="card">
+  <h2>⚙️ Settings</h2>
+  <label>My Faculty Name</label><input id="settingsName" placeholder="e.g. Dr Atul">
+  <button class="btn primary" id="saveName" style="margin-top:10px">Save Name</button>
+  <p class="muted">Similar faculty names are merged using the first 4 meaningful letters. If one version has Dr., Prof., Mrs., Ms., Mr. or another professional title, Naina prefers that titled version. If no title exists, Naina keeps the available name and does not invent a title.</p>
+ </div>
+ <div class="card">
+  <h2>Current Timetable</h2><div id="stats"></div>
+  <button class="smallbtn" id="clearData">Clear Imported Timetable</button>
+ </div>
+</section>
+</main>
+<script>
+const SAMPLE = [{"day": "Mon", "dayIndex": 0, "start": "09:05", "end": "10:00", "subject": "Business Eco.", "teacher": "Dr Sunaina", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Mon", "dayIndex": 0, "start": "10:00", "end": "10:55", "subject": "F. A/c & Analysis", "teacher": "Ms Fariya", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Mon", "dayIndex": 0, "start": "10:55", "end": "11:50", "subject": "Mgt Process & O.B", "teacher": "Ms Arunima", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Mon", "dayIndex": 0, "start": "12:50", "end": "01:45", "subject": "Comm Skills", "teacher": "Ms Rakhi Gaur", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Mon", "dayIndex": 0, "start": "01:45", "end": "02:40", "subject": "Bus. Mathematics", "teacher": "Kirti Gupta", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Mon", "dayIndex": 0, "start": "02:40", "end": "03:35", "subject": "A.I for Everyone", "teacher": "Mr Faiz Mansoori", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Mon", "dayIndex": 0, "start": "03:35", "end": "4:30", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Tue", "dayIndex": 1, "start": "09:05", "end": "10:00", "subject": "Business Eco.", "teacher": "Dr Sunaina", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Tue", "dayIndex": 1, "start": "10:00", "end": "10:55", "subject": "F. A/c & Analysis", "teacher": "Ms Fariya", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Tue", "dayIndex": 1, "start": "10:55", "end": "11:50", "subject": "Mgt Process & O.B", "teacher": "Ms Arunima", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Tue", "dayIndex": 1, "start": "12:50", "end": "01:45", "subject": "Comm Skills", "teacher": "Ms Rakhi Gaur", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Tue", "dayIndex": 1, "start": "01:45", "end": "02:40", "subject": "Bus. Mathematics", "teacher": "Kirti Gupta", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Tue", "dayIndex": 1, "start": "02:40", "end": "03:35", "subject": "A.I for Everyone", "teacher": "Mr Faiz Mansoori", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Tue", "dayIndex": 1, "start": "03:35", "end": "4:30", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Wed", "dayIndex": 2, "start": "09:05", "end": "10:00", "subject": "Business Eco.", "teacher": "Dr Sunaina", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Wed", "dayIndex": 2, "start": "10:00", "end": "10:55", "subject": "F. A/c & Analysis", "teacher": "Ms Fariya", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Wed", "dayIndex": 2, "start": "10:55", "end": "11:50", "subject": "Mgt Process & O.B", "teacher": "Ms Arunima", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Wed", "dayIndex": 2, "start": "12:50", "end": "01:45", "subject": "Comm Skills-Lab", "teacher": "Ms Rakhi Gaur", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Wed", "dayIndex": 2, "start": "01:45", "end": "02:40", "subject": "Bus. Mathematics", "teacher": "Kirti Gupta", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Wed", "dayIndex": 2, "start": "02:40", "end": "03:35", "subject": "A.I for Everyone", "teacher": "Mr Faiz Mansoori", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Wed", "dayIndex": 2, "start": "03:35", "end": "4:30", "subject": "L.S & P.D", "teacher": "Mr Brijesh", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Thu", "dayIndex": 3, "start": "09:05", "end": "10:00", "subject": "Business Eco.", "teacher": "Dr Sunaina", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Thu", "dayIndex": 3, "start": "10:00", "end": "10:55", "subject": "F. A/c & Analysis", "teacher": "Ms Fariya", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Thu", "dayIndex": 3, "start": "10:55", "end": "11:50", "subject": "Mgt Process & O.B", "teacher": "Ms Arunima", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Thu", "dayIndex": 3, "start": "12:50", "end": "01:45", "subject": "Comm Skills (-Lab)", "teacher": "Ms Rakhi Gaur", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Thu", "dayIndex": 3, "start": "01:45", "end": "02:40", "subject": "Bus. Mathematics", "teacher": "Kirti Gupta", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Thu", "dayIndex": 3, "start": "02:40", "end": "03:35", "subject": "IKS", "teacher": "Ms Arunima", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Thu", "dayIndex": 3, "start": "03:35", "end": "4:30", "subject": "Business Activity", "teacher": "Dr Karishma", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Fri", "dayIndex": 4, "start": "09:05", "end": "10:00", "subject": "Business Eco.", "teacher": "Dr Sunaina", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Fri", "dayIndex": 4, "start": "10:00", "end": "10:55", "subject": "F. A/c & Analysis", "teacher": "Ms Fariya", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Fri", "dayIndex": 4, "start": "10:55", "end": "11:50", "subject": "Mgt Process & O.B", "teacher": "Ms Arunima", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Fri", "dayIndex": 4, "start": "12:50", "end": "01:45", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Fri", "dayIndex": 4, "start": "01:45", "end": "02:40", "subject": "L.S & P.D", "teacher": "Mr Brijesh", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Fri", "dayIndex": 4, "start": "02:40", "end": "03:35", "subject": "IKS", "teacher": "Ms Arunima", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Fri", "dayIndex": 4, "start": "03:35", "end": "4:30", "subject": "Presentation Class", "teacher": "Mr Ayush Joshi", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Sat", "dayIndex": 5, "start": "09:05", "end": "10:00", "subject": "Business Eco.", "teacher": "Dr Sunaina", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Sat", "dayIndex": 5, "start": "10:00", "end": "10:55", "subject": "F. A/c & Analysis", "teacher": "Ms Fariya", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Sat", "dayIndex": 5, "start": "10:55", "end": "11:50", "subject": "Mgt Process & O.B", "teacher": "Ms Arunima", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Sat", "dayIndex": 5, "start": "12:50", "end": "01:45", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Sat", "dayIndex": 5, "start": "01:45", "end": "02:40", "subject": "Bus. Mathematics", "teacher": "Kirti Gupta", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Sat", "dayIndex": 5, "start": "02:40", "end": "03:35", "subject": "L.S & P.D", "teacher": "Mr Brijesh", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Sat", "dayIndex": 5, "start": "03:35", "end": "4:30", "subject": "IKS", "teacher": "Ms Arunima", "room": "C127", "section": "FCMS- BBA (I Sem Sec- A)", "sheet": "I section A "}, {"day": "Mon", "dayIndex": 0, "start": "09:05", "end": "10:00", "subject": "A.I for Everyone", "teacher": "Mr Faiz Mansoori", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Mon", "dayIndex": 0, "start": "10:00", "end": "10:55", "subject": "Mgt Process & O.B", "teacher": "Rajni ma’am", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Mon", "dayIndex": 0, "start": "10:55", "end": "11:50", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Mon", "dayIndex": 0, "start": "12:50", "end": "01:45", "subject": "L.S & P.D", "teacher": "Dr Sunaina", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Mon", "dayIndex": 0, "start": "01:45", "end": "02:40", "subject": "F. A/c & Analysis", "teacher": "Dr Atul", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Mon", "dayIndex": 0, "start": "02:40", "end": "03:35", "subject": "Comm Skills", "teacher": "Dr Karishma", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Mon", "dayIndex": 0, "start": "03:35", "end": "4:30", "subject": "Business Eco.", "teacher": "Brijesh Sir", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Tue", "dayIndex": 1, "start": "09:05", "end": "10:00", "subject": "Bus. Mathematics", "teacher": "Ms Kirti Gupta", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Tue", "dayIndex": 1, "start": "10:00", "end": "10:55", "subject": "A.I for Everyone", "teacher": "Mr Faiz Mansoori", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Tue", "dayIndex": 1, "start": "10:55", "end": "11:50", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Tue", "dayIndex": 1, "start": "12:50", "end": "01:45", "subject": "L.S & P.D", "teacher": "Dr Sunaina", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Tue", "dayIndex": 1, "start": "01:45", "end": "02:40", "subject": "F. A/c & Analysis", "teacher": "Dr Atul", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Tue", "dayIndex": 1, "start": "02:40", "end": "03:35", "subject": "Comm Skills", "teacher": "Dr Karishma", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Tue", "dayIndex": 1, "start": "03:35", "end": "4:30", "subject": "Business Eco.", "teacher": "Brijesh Sir", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Wed", "dayIndex": 2, "start": "09:05", "end": "10:00", "subject": "Bus. Mathematics", "teacher": "Ms Kirti Gupta", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Wed", "dayIndex": 2, "start": "10:00", "end": "10:55", "subject": "Mgt Process & O.B", "teacher": "Rajni ma’am", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Wed", "dayIndex": 2, "start": "10:55", "end": "11:50", "subject": "Business Eco.", "teacher": "Brijesh Sir", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Wed", "dayIndex": 2, "start": "12:50", "end": "01:45", "subject": "L.S & P.D", "teacher": "Dr Sunaina", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Wed", "dayIndex": 2, "start": "01:45", "end": "02:40", "subject": "F. A/c & Analysis", "teacher": "Dr Atul", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Wed", "dayIndex": 2, "start": "02:40", "end": "03:35", "subject": "Comm Skills", "teacher": "Dr Karishma", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Wed", "dayIndex": 2, "start": "03:35", "end": "4:30", "subject": "Business Activity", "teacher": "Ms Akshita", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Thu", "dayIndex": 3, "start": "09:05", "end": "10:00", "subject": "Bus. Mathematics", "teacher": "Ms Kirti Gupta", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Thu", "dayIndex": 3, "start": "10:00", "end": "10:55", "subject": "Mgt Process & O.B", "teacher": "Rajni ma’am", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Thu", "dayIndex": 3, "start": "10:55", "end": "11:50", "subject": "Business Eco.", "teacher": "Brijesh Sir", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Thu", "dayIndex": 3, "start": "12:50", "end": "01:45", "subject": "IKS", "teacher": "Dr Sunaina", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Thu", "dayIndex": 3, "start": "01:45", "end": "02:40", "subject": "F. A/c & Analysis", "teacher": "Dr Atul", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Thu", "dayIndex": 3, "start": "02:40", "end": "03:35", "subject": "Comm Skills", "teacher": "Dr Karishma", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Thu", "dayIndex": 3, "start": "03:35", "end": "4:30", "subject": "Presentation Class", "teacher": "Mr Ayush Joshi", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Fri", "dayIndex": 4, "start": "09:05", "end": "10:00", "subject": "Bus. Mathematics", "teacher": "Ms Kirti Gupta", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Fri", "dayIndex": 4, "start": "10:00", "end": "10:55", "subject": "Mgt Process & O.B", "teacher": "Rajni ma’am", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Fri", "dayIndex": 4, "start": "10:55", "end": "11:50", "subject": "Business Eco.", "teacher": "Brijesh Sir", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Fri", "dayIndex": 4, "start": "12:50", "end": "01:45", "subject": "IKS", "teacher": "Dr Sunaina", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Fri", "dayIndex": 4, "start": "01:45", "end": "02:40", "subject": "F. A/c & Analysis", "teacher": "Dr Atul", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Fri", "dayIndex": 4, "start": "02:40", "end": "03:35", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Fri", "dayIndex": 4, "start": "03:35", "end": "4:30", "subject": "Business Activity", "teacher": "Dr Karishma", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Sat", "dayIndex": 5, "start": "09:05", "end": "10:00", "subject": "Bus. Mathematics", "teacher": "Ms Kirti Gupta", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Sat", "dayIndex": 5, "start": "10:00", "end": "10:55", "subject": "Mgt Process & O.B", "teacher": "Rajni ma’am", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Sat", "dayIndex": 5, "start": "10:55", "end": "11:50", "subject": "Business Eco.", "teacher": "Brijesh Sir", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Sat", "dayIndex": 5, "start": "12:50", "end": "01:45", "subject": "Business Activity", "teacher": "Ms Arunima", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Sat", "dayIndex": 5, "start": "01:45", "end": "02:40", "subject": "A.I for Everyone", "teacher": "Mr Faiz Mansoori", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Sat", "dayIndex": 5, "start": "02:40", "end": "03:35", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Sat", "dayIndex": 5, "start": "03:35", "end": "4:30", "subject": "Comm Skills", "teacher": "Dr Karishma", "room": "C128", "section": "FCMS- BBA (I Sem Sec- B)", "sheet": "I section B"}, {"day": "Mon", "dayIndex": 0, "start": "09:05", "end": "10:00", "subject": "Business Eco.", "teacher": "Brijesh Sir", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Mon", "dayIndex": 0, "start": "10:00", "end": "10:55", "subject": "Comm Skills", "teacher": "Ms Rakhi Gaur", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Mon", "dayIndex": 0, "start": "10:55", "end": "11:50", "subject": "Presentation", "teacher": "Akshita", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Mon", "dayIndex": 0, "start": "12:50", "end": "01:45", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Mon", "dayIndex": 0, "start": "01:45", "end": "02:40", "subject": "Bus. Mathematics", "teacher": "Ms. Kirti", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Mon", "dayIndex": 0, "start": "02:40", "end": "03:35", "subject": "F. A/c & Analysis", "teacher": "Dr Atul", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Mon", "dayIndex": 0, "start": "03:35", "end": "4:30", "subject": "L.S & P.D", "teacher": "Dr.Shabano", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Tue", "dayIndex": 1, "start": "09:05", "end": "10:00", "subject": "Business Eco.", "teacher": "Brijesh Sir", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Tue", "dayIndex": 1, "start": "10:00", "end": "10:55", "subject": "Comm Skills", "teacher": "Ms Rakhi Gaur", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Tue", "dayIndex": 1, "start": "10:55", "end": "11:50", "subject": "Presentation", "teacher": "Akshita", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Tue", "dayIndex": 1, "start": "12:50", "end": "01:45", "subject": "Mgt Process & O.B", "teacher": "Rajni ma’am", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Tue", "dayIndex": 1, "start": "01:45", "end": "02:40", "subject": "Bus. Mathematics", "teacher": "Ms. Kirti", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Tue", "dayIndex": 1, "start": "02:40", "end": "03:35", "subject": "F. A/c & Analysis", "teacher": "Dr Atul", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Tue", "dayIndex": 1, "start": "03:35", "end": "4:30", "subject": "L.S & P.D", "teacher": "Dr.Shabano", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Wed", "dayIndex": 2, "start": "09:05", "end": "10:00", "subject": "Business Eco.", "teacher": "Brijesh Sir", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Wed", "dayIndex": 2, "start": "10:00", "end": "10:55", "subject": "Comm Skills-Lab", "teacher": "Ms Rakhi Gaur", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Wed", "dayIndex": 2, "start": "10:55", "end": "11:50", "subject": "L.S & P.D", "teacher": "Dr.Shabano", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Wed", "dayIndex": 2, "start": "12:50", "end": "01:45", "subject": "Mgt Process & O.B", "teacher": "Rajni ma’am", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Wed", "dayIndex": 2, "start": "01:45", "end": "02:40", "subject": "Bus. Mathematics", "teacher": "Ms. Kirti", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Wed", "dayIndex": 2, "start": "02:40", "end": "03:35", "subject": "F. A/c & Analysis", "teacher": "Dr Atul", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Wed", "dayIndex": 2, "start": "03:35", "end": "4:30", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Thu", "dayIndex": 3, "start": "09:05", "end": "10:00", "subject": "IKS", "teacher": "Mr Brijesh", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Thu", "dayIndex": 3, "start": "10:00", "end": "10:55", "subject": "Comm Skills -Lab", "teacher": "Ms Rakhi Gaur", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Thu", "dayIndex": 3, "start": "10:55", "end": "11:50", "subject": "A.I for Everyone", "teacher": "Mr Faiz Mansoori", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Thu", "dayIndex": 3, "start": "12:50", "end": "01:45", "subject": "Mgt Process & O.B", "teacher": "Rajni ma’am", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Thu", "dayIndex": 3, "start": "01:45", "end": "02:40", "subject": "Bus. Mathematics", "teacher": "Ms. Kirti", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Thu", "dayIndex": 3, "start": "02:40", "end": "03:35", "subject": "F. A/c & Analysis", "teacher": "Dr Atul", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Thu", "dayIndex": 3, "start": "03:35", "end": "4:30", "subject": "L.S & P.D", "teacher": "Dr.Shabano", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Fri", "dayIndex": 4, "start": "09:05", "end": "10:00", "subject": "IKS", "teacher": "Mr Brijesh", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Fri", "dayIndex": 4, "start": "10:00", "end": "10:55", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Fri", "dayIndex": 4, "start": "10:55", "end": "11:50", "subject": "A.I for Everyone", "teacher": "Mr Faiz Mansoori", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Fri", "dayIndex": 4, "start": "12:50", "end": "01:45", "subject": "Mgt Process & O.B", "teacher": "Rajni ma’am", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Fri", "dayIndex": 4, "start": "01:45", "end": "02:40", "subject": "Bus. Mathematics", "teacher": "Ms. Kirti", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Fri", "dayIndex": 4, "start": "02:40", "end": "03:35", "subject": "F. A/c & Analysis", "teacher": "Dr Atul", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Fri", "dayIndex": 4, "start": "03:35", "end": "4:30", "subject": "Business Eco.", "teacher": "Brijesh Sir", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Sat", "dayIndex": 5, "start": "09:05", "end": "10:00", "subject": "Business Eco.", "teacher": "Brijesh Sir", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Sat", "dayIndex": 5, "start": "10:00", "end": "10:55", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Sat", "dayIndex": 5, "start": "10:55", "end": "11:50", "subject": "A.I for Everyone", "teacher": "Mr Faiz Mansoori", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Sat", "dayIndex": 5, "start": "12:50", "end": "01:45", "subject": "Mgt Process & O.B", "teacher": "Rajni ma’am", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Sat", "dayIndex": 5, "start": "01:45", "end": "02:40", "subject": "Bus. Mathematics", "teacher": "Ms. Kirti", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Sat", "dayIndex": 5, "start": "02:40", "end": "03:35", "subject": "F. A/c & Analysis", "teacher": "Dr Atul", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Sat", "dayIndex": 5, "start": "03:35", "end": "4:30", "subject": "IKS", "teacher": "Mr Brijesh", "room": "C129", "section": "FCMS- BBA (I Sem Sec- C)", "sheet": "I section C"}, {"day": "Mon", "dayIndex": 0, "start": "09:05", "end": "10:00", "subject": "Digital Marketing", "teacher": "Ms Arunima", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Mon", "dayIndex": 0, "start": "10:00", "end": "10:55", "subject": "BRM", "teacher": "Ms Karishma", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Mon", "dayIndex": 0, "start": "10:55", "end": "11:50", "subject": "Presentation Class", "teacher": "Ms Shriya", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Mon", "dayIndex": 0, "start": "12:50", "end": "01:45", "subject": "Advanced Accounting", "teacher": "Mrs Swati", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Mon", "dayIndex": 0, "start": "01:45", "end": "02:40", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Mon", "dayIndex": 0, "start": "02:40", "end": "03:35", "subject": "Tally & its App in Business", "teacher": "Ms Fariya", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Mon", "dayIndex": 0, "start": "03:35", "end": "4:30", "subject": "Business Law", "teacher": "Ms Shriya-A", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Tue", "dayIndex": 1, "start": "09:05", "end": "10:00", "subject": "Digital Marketing", "teacher": "Ms Arunima", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Tue", "dayIndex": 1, "start": "10:00", "end": "10:55", "subject": "BRM", "teacher": "Ms Karishma", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Tue", "dayIndex": 1, "start": "10:55", "end": "11:50", "subject": "P & OM", "teacher": "Ms. Rajni", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Tue", "dayIndex": 1, "start": "12:50", "end": "01:45", "subject": "Advanced Accounting", "teacher": "Mrs Swati", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Tue", "dayIndex": 1, "start": "01:45", "end": "02:40", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Tue", "dayIndex": 1, "start": "02:40", "end": "03:35", "subject": "Tally & its App in Business", "teacher": "Ms Fariya", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Tue", "dayIndex": 1, "start": "03:35", "end": "4:30", "subject": "Business Law", "teacher": "Ms Shriya-A", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Wed", "dayIndex": 2, "start": "09:05", "end": "10:00", "subject": "Digital Marketing", "teacher": "Ms Arunima", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Wed", "dayIndex": 2, "start": "10:00", "end": "10:55", "subject": "BRM", "teacher": "Ms Karishma", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Wed", "dayIndex": 2, "start": "10:55", "end": "11:50", "subject": "P & OM", "teacher": "Ms. Rajni", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Wed", "dayIndex": 2, "start": "12:50", "end": "01:45", "subject": "Advanced Accounting", "teacher": "Mrs Swati", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Wed", "dayIndex": 2, "start": "01:45", "end": "02:40", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Wed", "dayIndex": 2, "start": "02:40", "end": "03:35", "subject": "Business Law-", "teacher": "Ms Shriya -A", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Wed", "dayIndex": 2, "start": "03:35", "end": "4:30", "subject": "Business Activity", "teacher": "Dr. Shabano", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Thu", "dayIndex": 3, "start": "09:05", "end": "10:00", "subject": "Digital Marketing", "teacher": "Ms Arunima", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Thu", "dayIndex": 3, "start": "10:00", "end": "10:55", "subject": "BRM", "teacher": "Ms Karishma", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Thu", "dayIndex": 3, "start": "10:55", "end": "11:50", "subject": "P & OM", "teacher": "Ms. Rajni", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Thu", "dayIndex": 3, "start": "12:50", "end": "01:45", "subject": "Advanced Accounting", "teacher": "Mrs Swati", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Thu", "dayIndex": 3, "start": "01:45", "end": "02:40", "subject": "H V & P E", "teacher": "Dr. Shabano", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Thu", "dayIndex": 3, "start": "02:40", "end": "03:35", "subject": "Business Law", "teacher": "Ms Shriya", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Thu", "dayIndex": 3, "start": "03:35", "end": "4:30", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Fri", "dayIndex": 4, "start": "09:05", "end": "10:00", "subject": "Digital Marketing", "teacher": "Ms Arunima", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Fri", "dayIndex": 4, "start": "10:00", "end": "10:55", "subject": "BRM", "teacher": "Ms Karishma", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Fri", "dayIndex": 4, "start": "10:55", "end": "11:50", "subject": "P & OM", "teacher": "Ms. Rajni", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Fri", "dayIndex": 4, "start": "12:50", "end": "01:45", "subject": "Advanced Accounting", "teacher": "Mrs Swati", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Fri", "dayIndex": 4, "start": "01:45", "end": "02:40", "subject": "H V & P E", "teacher": "Dr. Shabano", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Fri", "dayIndex": 4, "start": "02:40", "end": "03:35", "subject": "Business Law", "teacher": "Ms Shriya", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Fri", "dayIndex": 4, "start": "03:35", "end": "4:30", "subject": "Business Activity", "teacher": "Ms Akshita", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Sat", "dayIndex": 5, "start": "09:05", "end": "10:00", "subject": "Digital Marketing", "teacher": "Ms Arunima", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Sat", "dayIndex": 5, "start": "10:00", "end": "10:55", "subject": "BRM", "teacher": "Ms Karishma", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Sat", "dayIndex": 5, "start": "10:55", "end": "11:50", "subject": "P & OM", "teacher": "Ms. Rajni", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Sat", "dayIndex": 5, "start": "12:50", "end": "01:45", "subject": "Advanced Accounting", "teacher": "Mrs Swati", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Sat", "dayIndex": 5, "start": "01:45", "end": "02:40", "subject": "H V & P E", "teacher": "Dr. Shabano", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Sat", "dayIndex": 5, "start": "02:40", "end": "03:35", "subject": "Business Law", "teacher": "Ms Shriya", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Sat", "dayIndex": 5, "start": "03:35", "end": "4:30", "subject": "Business Activity", "teacher": "Ms Akshita", "room": "C130", "section": "FCMS- BBA (III Sem Sec- A)", "sheet": "II Sec A"}, {"day": "Mon", "dayIndex": 0, "start": "09:05", "end": "10:00", "subject": "BRM", "teacher": "Ms Karishma", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Mon", "dayIndex": 0, "start": "10:00", "end": "10:55", "subject": "P & OM", "teacher": "Mr Ayush", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Mon", "dayIndex": 0, "start": "10:55", "end": "11:50", "subject": "Advanced Accounting", "teacher": "Dr Akhlak Hussain", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Mon", "dayIndex": 0, "start": "12:50", "end": "01:45", "subject": "Digital Marketing", "teacher": "Mr Brijesh", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Mon", "dayIndex": 0, "start": "01:45", "end": "02:40", "subject": "H V & P E", "teacher": "Dr. Shabano", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Mon", "dayIndex": 0, "start": "02:40", "end": "03:35", "subject": "Tally & its App in Business", "teacher": "Mrs Swati Agarwal", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Mon", "dayIndex": 0, "start": "03:35", "end": "4:30", "subject": "Business Law", "teacher": "Ms Akshita", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Tue", "dayIndex": 1, "start": "09:05", "end": "10:00", "subject": "Business Law", "teacher": "Ms Akshita", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Tue", "dayIndex": 1, "start": "10:00", "end": "10:55", "subject": "P & OM", "teacher": "Mr Ayush", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Tue", "dayIndex": 1, "start": "10:55", "end": "11:50", "subject": "Advanced Accounting", "teacher": "Dr Akhlak Hussain", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Tue", "dayIndex": 1, "start": "12:50", "end": "01:45", "subject": "Digital Marketing", "teacher": "Mr Brijesh", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Tue", "dayIndex": 1, "start": "01:45", "end": "02:40", "subject": "H V & P E", "teacher": "Dr. Shabano", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Tue", "dayIndex": 1, "start": "02:40", "end": "03:35", "subject": "Tally & its App in Business", "teacher": "Mrs Swati Agarwal", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Tue", "dayIndex": 1, "start": "03:35", "end": "4:30", "subject": "Business Law", "teacher": "Ms Akshita", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Wed", "dayIndex": 2, "start": "09:05", "end": "10:00", "subject": "BRM", "teacher": "Ms Karishma", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Wed", "dayIndex": 2, "start": "10:00", "end": "10:55", "subject": "Business Law", "teacher": "Ms Akshita", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Wed", "dayIndex": 2, "start": "10:55", "end": "11:50", "subject": "Advanced Accounting", "teacher": "Dr Akhlak Hussain", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Wed", "dayIndex": 2, "start": "12:50", "end": "01:45", "subject": "Digital Marketing", "teacher": "Mr Brijesh", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Wed", "dayIndex": 2, "start": "01:45", "end": "02:40", "subject": "H V & P E", "teacher": "Dr. Shabano", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Wed", "dayIndex": 2, "start": "02:40", "end": "03:35", "subject": "Tally & its App in Business", "teacher": "Mrs Swati Agarwal", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Wed", "dayIndex": 2, "start": "03:35", "end": "4:30", "subject": "Business Activity", "teacher": "Dr. Shabano", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Thu", "dayIndex": 3, "start": "09:05", "end": "10:00", "subject": "BRM", "teacher": "Ms Karishma", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Thu", "dayIndex": 3, "start": "10:00", "end": "10:55", "subject": "P & OM", "teacher": "Mr Ayush", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Thu", "dayIndex": 3, "start": "10:55", "end": "11:50", "subject": "Advanced Accounting", "teacher": "Dr Akhlak Hussain", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Thu", "dayIndex": 3, "start": "12:50", "end": "01:45", "subject": "Digital Marketing", "teacher": "Mr Brijesh", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Thu", "dayIndex": 3, "start": "01:45", "end": "02:40", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Thu", "dayIndex": 3, "start": "02:40", "end": "03:35", "subject": "Business Law", "teacher": "Ms Akshita-S", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Thu", "dayIndex": 3, "start": "03:35", "end": "4:30", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Fri", "dayIndex": 4, "start": "09:05", "end": "10:00", "subject": "BRM", "teacher": "Ms Karishma", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Fri", "dayIndex": 4, "start": "10:00", "end": "10:55", "subject": "P & OM", "teacher": "Mr Ayush", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Fri", "dayIndex": 4, "start": "10:55", "end": "11:50", "subject": "Advanced Accounting", "teacher": "Dr Akhlak Hussain", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Fri", "dayIndex": 4, "start": "12:50", "end": "01:45", "subject": "Digital Marketing", "teacher": "Mr Brijesh", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Fri", "dayIndex": 4, "start": "01:45", "end": "02:40", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Fri", "dayIndex": 4, "start": "02:40", "end": "03:35", "subject": "Business Law", "teacher": "Ms Akshita-S", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Fri", "dayIndex": 4, "start": "03:35", "end": "4:30", "subject": "Business Activity", "teacher": "Ms Akshita", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Sat", "dayIndex": 5, "start": "09:05", "end": "10:00", "subject": "BRM", "teacher": "Ms Karishma", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Sat", "dayIndex": 5, "start": "10:00", "end": "10:55", "subject": "P & OM", "teacher": "Mr Ayush", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Sat", "dayIndex": 5, "start": "10:55", "end": "11:50", "subject": "Advanced Accounting", "teacher": "Dr Akhlak Hussain", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Sat", "dayIndex": 5, "start": "12:50", "end": "01:45", "subject": "Digital Marketing", "teacher": "Mr Brijesh", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Sat", "dayIndex": 5, "start": "01:45", "end": "02:40", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Sat", "dayIndex": 5, "start": "02:40", "end": "03:35", "subject": "Business Law", "teacher": "Ms Akshita-S", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Sat", "dayIndex": 5, "start": "03:35", "end": "4:30", "subject": "Business Activity", "teacher": "Ms Akshita", "room": "C131", "section": "FCMS- BBA (III Sem Sec- B)", "sheet": "II Sec B "}, {"day": "Mon", "dayIndex": 0, "start": "09:05", "end": "10:00", "subject": "E-Com", "teacher": "Ms Rajni", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Mon", "dayIndex": 0, "start": "10:00", "end": "10:55", "subject": "Cons. Behv", "teacher": "Mrs Swati", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Mon", "dayIndex": 0, "start": "10:55", "end": "11:50", "subject": "T&D", "teacher": "Ms. Gagan Kaur", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Mon", "dayIndex": 0, "start": "12:50", "end": "01:45", "subject": "Advt. Mgt.", "teacher": "Dr Sha- Bano", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Mon", "dayIndex": 0, "start": "01:45", "end": "02:40", "subject": "MAFA", "teacher": "Ms Fariya", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Mon", "dayIndex": 0, "start": "02:40", "end": "03:35", "subject": "Cost Accounting", "teacher": "Dr Akhlak Hussain", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Mon", "dayIndex": 0, "start": "03:35", "end": "4:30", "subject": "Presentation Class", "teacher": "Ms Shriya", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Tue", "dayIndex": 1, "start": "09:05", "end": "10:00", "subject": "E-Com", "teacher": "Ms Rajni", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Tue", "dayIndex": 1, "start": "10:00", "end": "10:55", "subject": "Cons. Behv", "teacher": "Mrs Swati", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Tue", "dayIndex": 1, "start": "10:55", "end": "11:50", "subject": "T&D", "teacher": "Ms. Gagan Kaur", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Tue", "dayIndex": 1, "start": "12:50", "end": "01:45", "subject": "Advt. Mgt.", "teacher": "Dr Sha- Bano", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Tue", "dayIndex": 1, "start": "01:45", "end": "02:40", "subject": "MAFA", "teacher": "Ms Fariya", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Tue", "dayIndex": 1, "start": "02:40", "end": "03:35", "subject": "Cost Accounting", "teacher": "Dr Akhlak Hussain", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Tue", "dayIndex": 1, "start": "03:35", "end": "4:30", "subject": "Business Activity", "teacher": "Mr Ayush", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Wed", "dayIndex": 2, "start": "09:05", "end": "10:00", "subject": "E-Com", "teacher": "Ms Rajni", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Wed", "dayIndex": 2, "start": "10:00", "end": "10:55", "subject": "Cons. Behv", "teacher": "Mrs Swati", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Wed", "dayIndex": 2, "start": "10:55", "end": "11:50", "subject": "T&D", "teacher": "Ms. Gagan Kaur", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Wed", "dayIndex": 2, "start": "12:50", "end": "01:45", "subject": "Advt. Mgt.", "teacher": "Dr Sha- Bano", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Wed", "dayIndex": 2, "start": "01:45", "end": "02:40", "subject": "MAFA", "teacher": "Ms Fariya", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Wed", "dayIndex": 2, "start": "02:40", "end": "03:35", "subject": "Cost Accounting", "teacher": "Dr Akhlak Hussain", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Wed", "dayIndex": 2, "start": "03:35", "end": "4:30", "subject": "Business Activity", "teacher": "Mr Ayush", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Thu", "dayIndex": 3, "start": "09:05", "end": "10:00", "subject": "E-Com", "teacher": "Ms Rajni", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Thu", "dayIndex": 3, "start": "10:00", "end": "10:55", "subject": "Cons. Behv", "teacher": "Mrs Swati", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Thu", "dayIndex": 3, "start": "10:55", "end": "11:50", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Thu", "dayIndex": 3, "start": "12:50", "end": "01:45", "subject": "Advt. Mgt.", "teacher": "Dr Sha- Bano", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Thu", "dayIndex": 3, "start": "01:45", "end": "02:40", "subject": "MAFA", "teacher": "Ms Fariya", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Thu", "dayIndex": 3, "start": "02:40", "end": "03:35", "subject": "Cost Accounting", "teacher": "Dr Akhlak Hussain", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Thu", "dayIndex": 3, "start": "03:35", "end": "4:30", "subject": "Presentation Class", "teacher": "Ms Shriya", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Fri", "dayIndex": 4, "start": "09:05", "end": "10:00", "subject": "E-Com", "teacher": "Ms Rajni", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Fri", "dayIndex": 4, "start": "10:00", "end": "10:55", "subject": "Cons. Behv", "teacher": "Mrs Swati", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Fri", "dayIndex": 4, "start": "10:55", "end": "11:50", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Fri", "dayIndex": 4, "start": "12:50", "end": "01:45", "subject": "Advt. Mgt.", "teacher": "Dr Sha- Bano", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Fri", "dayIndex": 4, "start": "01:45", "end": "02:40", "subject": "MAFA", "teacher": "Ms Fariya", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Fri", "dayIndex": 4, "start": "02:40", "end": "03:35", "subject": "Cost Accounting", "teacher": "Dr Akhlak Hussain", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Fri", "dayIndex": 4, "start": "03:35", "end": "4:30", "subject": "Presentation Class", "teacher": "Ms Shriya", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Sat", "dayIndex": 5, "start": "09:05", "end": "10:00", "subject": "E-Com", "teacher": "Ms Rajni", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Sat", "dayIndex": 5, "start": "10:00", "end": "10:55", "subject": "Cons. Behv", "teacher": "Mrs Swati", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Sat", "dayIndex": 5, "start": "10:55", "end": "11:50", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Sat", "dayIndex": 5, "start": "12:50", "end": "01:45", "subject": "Advt. Mgt.", "teacher": "Dr Sha- Bano", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Sat", "dayIndex": 5, "start": "01:45", "end": "02:40", "subject": "MAFA", "teacher": "Ms Fariya", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Sat", "dayIndex": 5, "start": "02:40", "end": "03:35", "subject": "Cost Accounting", "teacher": "Dr Akhlak Hussain", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Sat", "dayIndex": 5, "start": "03:35", "end": "4:30", "subject": "Presentation Class", "teacher": "Ms Shriya", "room": "C126", "section": "FCMS- BBA ( BBA Sem V)", "sheet": "III"}, {"day": "Mon", "dayIndex": 0, "start": "09:05", "end": "10:00", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Mon", "dayIndex": 0, "start": "10:00", "end": "10:55", "subject": "Micro-Eco.", "teacher": "Dr. Sunaina", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Mon", "dayIndex": 0, "start": "10:55", "end": "11:50", "subject": "Financial A/C", "teacher": "Dr Atul", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Mon", "dayIndex": 0, "start": "12:50", "end": "01:45", "subject": "Q.T.", "teacher": "Kirti Ma'am", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Mon", "dayIndex": 0, "start": "01:45", "end": "02:40", "subject": "IKS", "teacher": "Ms Arunima", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Mon", "dayIndex": 0, "start": "02:40", "end": "03:35", "subject": "English L. & Comm.", "teacher": "Ms. Rakhi Gaur", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Mon", "dayIndex": 0, "start": "03:35", "end": "4:30", "subject": "Mgt Pro. & Org", "teacher": "Mr Ayush Joshi", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Tue", "dayIndex": 1, "start": "09:05", "end": "10:00", "subject": "Mgt Pro. & Org. Ph.", "teacher": "Mr Ayush Joshi", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Tue", "dayIndex": 1, "start": "10:00", "end": "10:55", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Tue", "dayIndex": 1, "start": "10:55", "end": "11:50", "subject": "Financial A/C", "teacher": "Dr Atul", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Tue", "dayIndex": 1, "start": "12:50", "end": "01:45", "subject": "Q.T.", "teacher": "Kirti Ma'am", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Tue", "dayIndex": 1, "start": "01:45", "end": "02:40", "subject": "IKS", "teacher": "Ms Arunima", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Tue", "dayIndex": 1, "start": "02:40", "end": "03:35", "subject": "English L. & Comm.", "teacher": "Ms. Rakhi Gaur", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Tue", "dayIndex": 1, "start": "03:35", "end": "4:30", "subject": "Computer Appl.", "teacher": "Mr Faiz Mansoori", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Wed", "dayIndex": 2, "start": "09:05", "end": "10:00", "subject": "Mgt Pro. & Org. Ph.", "teacher": "Mr Ayush Joshi", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Wed", "dayIndex": 2, "start": "10:00", "end": "10:55", "subject": "Micro-Eco.", "teacher": "Dr. Sunaina", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Wed", "dayIndex": 2, "start": "10:55", "end": "11:50", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Wed", "dayIndex": 2, "start": "12:50", "end": "01:45", "subject": "Q.T.", "teacher": "Kirti Ma'am", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Wed", "dayIndex": 2, "start": "01:45", "end": "02:40", "subject": "English L. & Comm.", "teacher": "Ms. Rakhi Gaur", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Wed", "dayIndex": 2, "start": "02:40", "end": "03:35", "subject": "Computer Appl.", "teacher": "Mr Faiz Mansoori", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Wed", "dayIndex": 2, "start": "03:35", "end": "4:30", "subject": "IKS", "teacher": "Ms Arunima", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Thu", "dayIndex": 3, "start": "09:05", "end": "10:00", "subject": "Mgt Pro. & Org. Ph.", "teacher": "Mr Ayush Joshi", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Thu", "dayIndex": 3, "start": "10:00", "end": "10:55", "subject": "Micro-Eco.", "teacher": "Dr. Sunaina", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Thu", "dayIndex": 3, "start": "10:55", "end": "11:50", "subject": "Financial A/C", "teacher": "Dr Atul", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Thu", "dayIndex": 3, "start": "12:50", "end": "01:45", "subject": "Q.T.", "teacher": "Kirti Ma'am", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Thu", "dayIndex": 3, "start": "01:45", "end": "02:40", "subject": "English L. & Comm.", "teacher": "Ms. Rakhi Gaur", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Thu", "dayIndex": 3, "start": "02:40", "end": "03:35", "subject": "Computer Appl.", "teacher": "Mr Faiz Mansoori", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Thu", "dayIndex": 3, "start": "03:35", "end": "4:30", "subject": "IKS", "teacher": "Ms Arunima", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Fri", "dayIndex": 4, "start": "09:05", "end": "10:00", "subject": "Mgt Pro. & Org. Ph.", "teacher": "Mr Ayush Joshi", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Fri", "dayIndex": 4, "start": "10:00", "end": "10:55", "subject": "Micro-Eco.", "teacher": "Dr. Sunaina", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Fri", "dayIndex": 4, "start": "10:55", "end": "11:50", "subject": "Financial A/C", "teacher": "Dr Atul", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Fri", "dayIndex": 4, "start": "12:50", "end": "01:45", "subject": "Q.T.", "teacher": "Kirti Ma'am", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Fri", "dayIndex": 4, "start": "01:45", "end": "02:40", "subject": "English L. & Comm.", "teacher": "Ms. Rakhi Gaur", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Fri", "dayIndex": 4, "start": "02:40", "end": "03:35", "subject": "Computer Appl.", "teacher": "Mr Faiz Mansoori", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Fri", "dayIndex": 4, "start": "03:35", "end": "4:30", "subject": "IKS", "teacher": "Ms Arunima", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Sat", "dayIndex": 5, "start": "09:05", "end": "10:00", "subject": "Mgt Pro. & Org. Ph.", "teacher": "Mr Ayush Joshi", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Sat", "dayIndex": 5, "start": "10:00", "end": "10:55", "subject": "Micro-Eco.", "teacher": "Dr. Sunaina", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Sat", "dayIndex": 5, "start": "10:55", "end": "11:50", "subject": "Financial A/C", "teacher": "Dr Atul", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Sat", "dayIndex": 5, "start": "12:50", "end": "01:45", "subject": "Q.T.", "teacher": "Kirti Ma'am", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Sat", "dayIndex": 5, "start": "01:45", "end": "02:40", "subject": "English L. & Comm.", "teacher": "Ms. Rakhi Gaur", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Sat", "dayIndex": 5, "start": "02:40", "end": "03:35", "subject": "Computer Appl.", "teacher": "Mr Faiz Mansoori", "room": "C138", "section": "FCMS- BCOM (I Sem)", "sheet": "B.com I"}, {"day": "Mon", "dayIndex": 0, "start": "09:05", "end": "10:00", "subject": "A/c Software", "teacher": "Dr Atul", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Mon", "dayIndex": 0, "start": "10:00", "end": "10:55", "subject": "Critical Reading and E.W.", "teacher": "Ms. Arunima", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Mon", "dayIndex": 0, "start": "10:55", "end": "11:50", "subject": "Banking Operations", "teacher": "Dr Shah Bano", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Mon", "dayIndex": 0, "start": "12:50", "end": "01:45", "subject": "Cost Accounting", "teacher": "Dr Akhlak Hussain", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Mon", "dayIndex": 0, "start": "01:45", "end": "02:40", "subject": "Business Law", "teacher": "Ms Akshita", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Mon", "dayIndex": 0, "start": "02:40", "end": "03:35", "subject": "DTI", "teacher": "Mr Gaurav", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Mon", "dayIndex": 0, "start": "03:35", "end": "4:30", "subject": "Critical Reading and E.W.", "teacher": "Ms. Arunima", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Tue", "dayIndex": 1, "start": "09:05", "end": "10:00", "subject": "T & D", "teacher": "Akashpreet Kaur", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Tue", "dayIndex": 1, "start": "10:00", "end": "10:55", "subject": "BRM", "teacher": "Dr Mradul Sharma", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Tue", "dayIndex": 1, "start": "10:55", "end": "11:50", "subject": "Banking Operations", "teacher": "Dr Shah Bano", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Tue", "dayIndex": 1, "start": "12:50", "end": "01:45", "subject": "Cost Accounting", "teacher": "Dr Akhlak Hussain", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Tue", "dayIndex": 1, "start": "01:45", "end": "02:40", "subject": "Business Law", "teacher": "Ms Akshita", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Tue", "dayIndex": 1, "start": "02:40", "end": "03:35", "subject": "DTI", "teacher": "Mr Gaurav", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Tue", "dayIndex": 1, "start": "03:35", "end": "4:30", "subject": "Business Activity", "teacher": "Ms Karishma", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Wed", "dayIndex": 2, "start": "09:05", "end": "10:00", "subject": "A/c Software", "teacher": "Dr Atul", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Wed", "dayIndex": 2, "start": "10:00", "end": "10:55", "subject": "BRM", "teacher": "Dr Mradul Sharma", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Wed", "dayIndex": 2, "start": "10:55", "end": "11:50", "subject": "Banking Operations", "teacher": "Dr Shah Bano", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Wed", "dayIndex": 2, "start": "12:50", "end": "01:45", "subject": "Cost Accounting", "teacher": "Dr Akhlak Hussain", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Wed", "dayIndex": 2, "start": "01:45", "end": "02:40", "subject": "Business Law", "teacher": "Ms Akshita", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Wed", "dayIndex": 2, "start": "02:40", "end": "03:35", "subject": "DTI", "teacher": "Mr Gaurav", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Wed", "dayIndex": 2, "start": "03:35", "end": "4:30", "subject": "Business Activity", "teacher": "Ms Karishma", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Thu", "dayIndex": 3, "start": "09:05", "end": "10:00", "subject": "A/c Software", "teacher": "Dr Atul", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Thu", "dayIndex": 3, "start": "10:00", "end": "10:55", "subject": "BRM", "teacher": "Dr Mradul Sharma", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Thu", "dayIndex": 3, "start": "10:55", "end": "11:50", "subject": "Banking Operations", "teacher": "Dr Shah Bano", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Thu", "dayIndex": 3, "start": "12:50", "end": "01:45", "subject": "Cost Accounting", "teacher": "Dr Akhlak Hussain", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Thu", "dayIndex": 3, "start": "01:45", "end": "02:40", "subject": "Business Law", "teacher": "Ms Akshita", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Thu", "dayIndex": 3, "start": "02:40", "end": "03:35", "subject": "T&D", "teacher": "Akashdeep Kaur", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Thu", "dayIndex": 3, "start": "03:35", "end": "4:30", "subject": "DTI", "teacher": "Mr Gaurav", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Fri", "dayIndex": 4, "start": "09:05", "end": "10:00", "subject": "A/c Software", "teacher": "Dr Atul", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Fri", "dayIndex": 4, "start": "10:00", "end": "10:55", "subject": "BRM", "teacher": "Dr Mradul Sharma", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Fri", "dayIndex": 4, "start": "12:50", "end": "01:45", "subject": "Cost Accounting", "teacher": "Dr Akhlak Hussain", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Fri", "dayIndex": 4, "start": "01:45", "end": "02:40", "subject": "Business Law", "teacher": "Ms Akshita", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Fri", "dayIndex": 4, "start": "02:40", "end": "03:35", "subject": "Critical Reading and E.W.", "teacher": "Ms. Arunima", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Fri", "dayIndex": 4, "start": "03:35", "end": "4:30", "subject": "Banking Operations", "teacher": "Dr Shah Bano", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Sat", "dayIndex": 5, "start": "09:05", "end": "10:00", "subject": "A/c Software", "teacher": "Dr Atul", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Sat", "dayIndex": 5, "start": "10:00", "end": "10:55", "subject": "BRM", "teacher": "Dr Mradul Sharma", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Sat", "dayIndex": 5, "start": "10:55", "end": "11:50", "subject": "T&D", "teacher": "Akashdeep Kaur", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Sat", "dayIndex": 5, "start": "12:50", "end": "01:45", "subject": "Cost Accounting", "teacher": "Dr Akhlak Hussain", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Sat", "dayIndex": 5, "start": "01:45", "end": "02:40", "subject": "Business Law", "teacher": "Ms Akshita", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Sat", "dayIndex": 5, "start": "02:40", "end": "03:35", "subject": "Critical Reading and E.W.", "teacher": "Ms. Arunima", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}, {"day": "Sat", "dayIndex": 5, "start": "03:35", "end": "4:30", "subject": "Banking Operations", "teacher": "Dr Shah Bano", "room": "C132", "section": "FCMS- BCOM (III Sem)", "sheet": "BCOM II"}];
+const SAMPLE_SHEETS = [
+  {
+    "sheet": "I section A ",
+    "room": "C127",
+    "program": "FCMS- BBA (I Sem Sec- A)",
+    "classes": 42
+  },
+  {
+    "sheet": "I section B",
+    "room": "C128",
+    "program": "FCMS- BBA (I Sem Sec- B)",
+    "classes": 42
+  },
+  {
+    "sheet": "I section C",
+    "room": "C129",
+    "program": "FCMS- BBA (I Sem Sec- C)",
+    "classes": 42
+  },
+  {
+    "sheet": "II Sec A",
+    "room": "C130",
+    "program": "FCMS- BBA (III Sem Sec- A)",
+    "classes": 42
+  },
+  {
+    "sheet": "II Sec B ",
+    "room": "C131",
+    "program": "FCMS- BBA (III Sem Sec- B)",
+    "classes": 42
+  },
+  {
+    "sheet": "III",
+    "room": "C126",
+    "program": "FCMS- BBA ( BBA Sem V)",
+    "classes": 42
+  },
+  {
+    "sheet": "B.com I",
+    "room": "C138",
+    "program": "FCMS- BCOM (I Sem)",
+    "classes": 41
+  },
+  {
+    "sheet": "BCOM II",
+    "room": "C132",
+    "program": "FCMS- BCOM (III Sem)",
+    "classes": 41
+  }
+];
+const KEY='NainaSmartTimetableV4_8_ExactTimetable';
+const NAMEKEY='NainaMyFacultyName';
+const days=['Mon','Tue','Wed','Thu','Fri','Sat'];
+let data=JSON.parse(localStorage.getItem(KEY)||'null')||SAMPLE;
+let sheetInfo=JSON.parse(localStorage.getItem(KEY+'_sheets')||'null')||SAMPLE_SHEETS;
+let myName=localStorage.getItem(NAMEKEY)||'Dr Atul';
+// Normalize faculty spellings in the current timetable at startup.
+// Prefer the version carrying a professional/academic title.
+canonicalizeFacultyData();
+const UNIVERSITY_OPEN=9*60, UNIVERSITY_CLOSE=17*60;
+function withinUniversityHours(x){const s=parseClock(x.start), e=parseClock(x.end); return s!==null && e!==null && s>=UNIVERSITY_OPEN && e<=UNIVERSITY_CLOSE;}
+
+function norm(s){return String(s||'').toLowerCase().replace(/[().]/g,' ').replace(/\s+/g,' ').trim();}
+function facultyKey(s){
+  // Identity key: first 4 meaningful alphabetic characters.
+  return norm(s).replace(/[^a-z]/g,'').slice(0,4);
+}
+function facultyTitleRank(s){
+  const v=norm(s);
+  // Higher score = stronger preferred professional/academic title.
+  if(/^(dr|doctor)\b/.test(v)) return 100;
+  if(/^(prof|professor)\b/.test(v)) return 95;
+  if(/^(mrs|ms|miss|mr)\b/.test(v)) return 90;
+  if(/^(smt|shri|sri|smti)\b/.test(v)) return 85;
+  if(/^(ca|cs|adv|advocate|eng|er)\b/.test(v)) return 80;
+  return 0;
+}
+function facultyDisplayName(s){
+  const raw=String(s||'').trim();
+  return raw.replace(/\s+/g,' ').trim();
+}
+function facultyTitlePrefix(s){
+  const v=facultyDisplayName(s);
+  const m=v.match(/^(Dr\.?|Doctor|Prof\.?|Professor|Mrs\.?|Ms\.?|Miss|Mr\.?|Smt\.?|Shri|Sri|Smti|CA|CS|Adv\.?|Advocate|Eng\.?|Er\.?)\s+/i);
+  return m ? m[0].trim() : '';
+}
+function facultyBaseName(s){
+  return facultyDisplayName(s)
+    .replace(/^(Dr\.?|Doctor|Prof\.?|Professor|Mrs\.?|Ms\.?|Miss|Mr\.?|Smt\.?|Shri|Sri|Smti|CA|CS|Adv\.?|Advocate|Eng\.?|Er\.?)\s+/i,'')
+    .replace(/\b(ma['’]?am|sir)\b/ig,'')
+    .replace(/[-_]/g,' ')
+    .replace(/[^a-zA-Z\s]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+function facultyNameTokens(s){
+  const b=facultyBaseName(s).toLowerCase();
+  return b ? b.split(/\s+/).filter(Boolean) : [];
+}
+function facultyNameKey(s){
+  const t=facultyNameTokens(s);
+  return t[0] ? t[0].replace(/[^a-z]/g,'') : '';
+}
+function facultyNameRichness(s){
+  const b=facultyBaseName(s), t=facultyNameTokens(s);
+  return t.length*1000+b.replace(/[^a-z]/gi,'').length;
+}
+function facultyVariantsRelated(a,b){
+  const A=facultyNameTokens(a), B=facultyNameTokens(b);
+  if(!A.length||!B.length)return false;
+
+  // Exact first-name match is used for abbreviated/full variants:
+  // "Ms Kirti" <-> "Kirti Gupta"
+  // "Mr Ayush" <-> "Mr Ayush Joshi"
+  // "Rajni ma'am" <-> "Ms Rajni"
+  if(A[0]===B[0])return true;
+
+  // Also handle joined/short forms such as "Shah-Bano" and "Shah Bano".
+  const aa=A.join(''), bb=B.join('');
+  return aa===bb || aa.startsWith(bb) || bb.startsWith(aa);
+}
+function bestFacultyTitle(rows){
+  let best='', rank=-1;
+  rows.forEach(x=>{
+    const title=facultyTitlePrefix(x.teacher);
+    if(!title)return;
+    const r=facultyTitleRank(title);
+    if(r>rank){rank=r;best=title;}
+  });
+  return best;
+}
+function chooseCanonicalFaculty(rows){
+  const valid=rows.map(x=>facultyDisplayName(x.teacher)).filter(Boolean);
+  if(!valid.length)return '';
+
+  // Prefer the most complete version of the name.
+  let richest=valid.slice().sort((a,b)=>{
+    const rb=facultyNameRichness(b), ra=facultyNameRichness(a);
+    if(rb!==ra)return rb-ra;
+    const tb=facultyTitleRank(b), ta=facultyTitleRank(a);
+    if(tb!==ta)return tb-ta;
+    return a.length-b.length;
+  })[0];
+
+  const title=bestFacultyTitle(rows);
+  const base=facultyBaseName(richest);
+  return title ? (title+' '+base).trim() : richest;
+}
+function buildFacultyGroups(){
+  const names=[...new Set(data.map(x=>facultyDisplayName(x.teacher)).filter(Boolean))];
+  const groups=[];
+  names.forEach(name=>{
+    let g=groups.find(existing=>existing.some(n=>facultyVariantsRelated(n,name)));
+    if(!g){g=[name];groups.push(g);} else g.push(name);
+  });
+  return groups;
+}
+function canonicalForName(name){
+  const raw=facultyDisplayName(name);
+  if(!raw)return '';
+  const group=buildFacultyGroups().find(g=>g.some(n=>n===raw));
+  if(!group)return raw;
+  return chooseCanonicalFaculty(group.map(n=>({teacher:n})));
+}
+function facultyCanonical(s){
+  return canonicalForName(s);
+}
+function canonicalizeFacultyData(){
+  const groups=buildFacultyGroups();
+  groups.forEach(group=>{
+    const canonical=chooseCanonicalFaculty(group.map(n=>({teacher:n})));
+    data.forEach(x=>{
+      if(group.includes(facultyDisplayName(x.teacher))) x.teacher=canonical;
+    });
+  });
+}
+function uniqueFacultyNames(){
+  const out=[];
+  const seen=new Set();
+  for(const x of data){
+    const name=facultyCanonical(x.teacher);
+    const key=facultyBaseName(name).toLowerCase();
+    if(!key||seen.has(key))continue;
+    seen.add(key); out.push(name);
+  }
+  return out.sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
+}
+function sameFaculty(a,b){
+  const A=facultyBaseName(a).toLowerCase();
+  const B=facultyBaseName(b).toLowerCase();
+  if(!A||!B)return false;
+  return A===B || facultyVariantsRelated(a,b);
+}
+
+function matchesName(t){return sameFaculty(myName,t);}
+function parseClock(s){
+ let m=String(s).match(/(\d{1,2}):(\d{2})/); if(!m)return null;
+ let h=Number(m[1]), min=Number(m[2]);
+ // The university Excel timetable uses 12-hour-style labels without AM/PM:
+ // 12:50 = 12:50 PM, 01:45 = 13:45, 02:40 = 14:40,
+ // 03:35 = 15:35 and 4:30 = 16:30.
+ // Convert those afternoon labels to 24-hour minutes so 09:00–17:00
+ // filtering does not accidentally discard afternoon classes.
+ if(h>=1 && h<=4) h+=12;
+ return h*60 + min;
+}
+function nowMinutes(){let d=new Date();return d.getHours()*60+d.getMinutes();}
+function todayIndex(){let d=new Date().getDay(); return d===0?6:d-1;}
+function currentClasses(){
+ let n=nowMinutes(),di=todayIndex();
+ return data.filter(x=>withinUniversityHours(x)&&x.dayIndex===di&&parseClock(x.start)<=n&&n<parseClock(x.end));
+}
+function upcomingForMe(limit=10){
+ let now=new Date(), di=todayIndex(), nm=nowMinutes();
+ let arr=data.filter(x=>withinUniversityHours(x)&&matchesName(x));
+ return arr.map(x=>{
+   let delta=(x.dayIndex-di+7)%7;
+   if(delta===0 && parseClock(x.start)<=nm) delta=7;
+   return {...x,delta,sort:delta*1440+parseClock(x.start)};
+ }).sort((a,b)=>a.sort-b.sort).slice(0,limit);
+}
+function renderLive(){
+ let live=currentClasses();
+ document.getElementById('live').innerHTML=live.length?live.map(x=>`
+  <div class="item live"><strong>${esc(x.subject)}</strong>
+   <span class="tag">${esc(x.teacher||'Faculty not specified')}</span>
+   <span class="tag">Room ${esc(x.room||'—')}</span>
+   <span class="tag">${esc(x.start)}–${esc(x.end)}</span>
+   <div class="muted">${esc(x.section)} · ${esc(x.sheet)}</div>
+  </div>`).join(''):`<div class="empty">No class is running right now.</div>`;
+ document.getElementById('facultyNow').innerHTML=live.length?live.map(x=>`
+  <div class="item"><strong>${esc(x.teacher)}</strong>
+   <div>${esc(x.subject)} · <b>Room ${esc(x.room||'—')}</b></div>
+   <div class="muted">${esc(x.section)} · ${x.start}–${x.end}</div>
+  </div>`).join(''):`<div class="empty">No faculty class is active at the current time.</div>`;
+ let next=upcomingForMe(5);
+ document.getElementById('nextClasses').innerHTML=next.length?next.map(x=>`
+  <div class="item next"><strong>${esc(dayName(x.dayIndex))} · ${x.start}–${x.end}</strong>
+   <div>${esc(x.subject)} · Room ${esc(x.room||'—')}</div>
+   <div class="muted">${esc(x.section)} · ${esc(x.teacher)}</div>
+  </div>`).join(''):`<div class="empty">No upcoming classes found for “${esc(myName)}”. Set your name in Settings.</div>`;
+}
+function dayName(i){return days[i]||'';}
+function renderPersonal(){
+ let di=+document.getElementById('myDay').value;
+ let arr=data.filter(x=>withinUniversityHours(x)&&x.dayIndex===di&&matchesName(x.teacher)).sort((a,b)=>parseClock(a.start)-parseClock(b.start));
+ document.getElementById('personal').innerHTML=arr.length?arr.map(x=>`
+ <div class="item"><strong>${x.start}–${x.end} · ${esc(x.subject)}</strong>
+  <div>Room ${esc(x.room||'—')} · ${esc(x.section)}</div>
+  <div class="muted">${esc(x.teacher)}</div>
+ </div>`).join(''):`<div class="empty">No classes found for your name on ${dayName(di)}.</div>`;
+}
+function renderAll(){
+ let day=document.getElementById('masterDay')?.value||'all';
+ let ft=norm(document.getElementById('filterTeacher')?.value||''), fr=norm(document.getElementById('filterRoom')?.value||''), fs=norm(document.getElementById('filterSection')?.value||''), fc=norm(document.getElementById('filterCourse')?.value||'');
+
+ // University operating window: 09:00–17:00.
+ const OPEN=9*60, CLOSE=17*60;
+
+ let filtered=data.filter(x=>{
+   const t=parseClock(x.start);
+   return t!==null && t>=OPEN && t<CLOSE &&
+     (day==='all'||String(x.dayIndex)===String(day)) &&
+     (!ft||norm(x.teacher).includes(ft)) &&
+     (!fr||norm(x.room).includes(fr)) &&
+     (!fs||norm(x.section).includes(fs)) &&
+     (!fc||norm(x.subject).includes(fc));
+ });
+
+ // Build unique actual periods from the timetable, then sort strictly by start time.
+ let periods=[];
+ const seen=new Set();
+ for(const x of filtered){
+   const key=x.start+'|'+x.end;
+   if(!seen.has(key)){
+     seen.add(key);
+     periods.push({start:x.start,end:x.end,startMin:parseClock(x.start),endMin:parseClock(x.end)});
+   }
+ }
+ periods.sort((a,b)=>a.startMin-b.startMin||a.endMin-b.endMin);
+
+ let out='';
+ for(const p of periods){
+   let items=filtered.filter(x=>x.start===p.start&&x.end===p.end)
+     .sort((a,b)=>a.dayIndex-b.dayIndex||String(a.room).localeCompare(String(b.room))||String(a.section).localeCompare(String(b.section)));
+
+   // When all days are selected, keep the time slot together and show the day for each class.
+   out+=`<div class="item" style="margin-top:14px">
+     <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+       <strong>⏰ ${esc(p.start)}–${esc(p.end)}</strong>
+       <span class="tag">${items.length} class${items.length===1?'':'es'}</span>
+     </div>
+     <div class="scroll" style="margin-top:8px">
+      <table><thead><tr><th>Day</th><th>Teaching Faculty</th><th>Class / Section</th><th>Subject</th><th>Room</th></tr></thead><tbody>
+       ${items.map(x=>`<tr><td>${esc(x.day)}</td><td>${esc(x.teacher||'—')}</td><td>${esc(x.section||'—')}</td><td>${esc(x.subject||'—')}</td><td>${esc(x.room||'—')}</td></tr>`).join('')}
+      </tbody></table>
+     </div>
+   </div>`;
+ }
+ document.getElementById('allTable').innerHTML=out||`<div class="empty">No classes found between 9:00 AM and 5:00 PM for the selected filters.</div>`;
+}
+function renderSheets(){
+ document.getElementById('sheets').innerHTML=sheetInfo.map(s=>`<div class="item"><strong>${esc(s.sheet)}</strong><div>${esc(s.program)} · Room ${esc(s.room||'—')} · ${s.classes} classes</div></div>`).join('');
+}
+function renderStats(){document.getElementById('stats').innerHTML=`<b>${data.length}</b> classes loaded across <b>${sheetInfo.length}</b> sheets.`;}
+
+function renderUpcoming(){
+ let day=document.getElementById('upDay')?.value||'all';
+ let teacher=norm(document.getElementById('upTeacher')?.value||'');
+ let section=norm(document.getElementById('upSection')?.value||'');
+ let room=norm(document.getElementById('upRoom')?.value||'');
+ let course=norm(document.getElementById('upCourse')?.value||'');
+ let today=todayIndex(), now=nowMinutes();
+
+ let arr=data.filter(x=>{
+   if(!withinUniversityHours(x)) return false;
+   if(day!=='all' && String(x.dayIndex)!==String(day)) return false;
+   if(teacher && !norm(x.teacher).includes(teacher)) return false;
+   if(section && !norm(x.section).includes(section)) return false;
+   if(room && !norm(x.room).includes(room)) return false;
+   if(course && !norm(x.subject).includes(course)) return false;
+   // "Upcoming" means future from the current moment; future days are included.
+   if(day==='all'){
+     let delta=(x.dayIndex-today+7)%7;
+     if(delta===0 && parseClock(x.start)<=now) return false;
+   } else if(Number(day)===today && parseClock(x.start)<=now){
+     return false;
+   }
+   return true;
+ }).map(x=>{
+   let delta=(x.dayIndex-today+7)%7;
+   if(delta===0 && parseClock(x.start)<=now) delta=7;
+   return {...x,order:delta*1440+parseClock(x.start)};
+ }).sort((a,b)=>a.order-b.order);
+
+ let label=arr.length?`${arr.length} upcoming class${arr.length===1?'':'es'} found.`:'No upcoming classes match the selected filters.';
+ document.getElementById('upcomingSummary').textContent=label;
+
+ // Group visually by day while retaining chronological order.
+ let groups={};
+ arr.forEach(x=>(groups[x.day]??=[]).push(x));
+ document.getElementById('upcomingTable').innerHTML=arr.length ? Object.entries(groups).map(([day,items])=>`
+   <div style="margin:14px 0 8px;font-weight:800;font-size:16px">${esc(day)}</div>
+   <table><thead><tr>
+    <th>Time</th><th>Teaching Faculty</th><th>Class / Section</th><th>Subject</th><th>Room</th>
+   </tr></thead><tbody>
+   ${items.map(x=>`<tr>
+    <td><b>${esc(x.start)}–${esc(x.end)}</b></td>
+    <td>${esc(x.teacher||'—')}</td>
+    <td>${esc(x.section||'—')}</td>
+    <td>${esc(x.subject||'—')}</td>
+    <td>${esc(x.room||'—')}</td>
+   </tr>`).join('')}
+   </tbody></table>
+ `).join('') : `<div class="empty">${esc(label)}</div>`;
+}
+
+
+function dateDayIndex(dateString){
+ if(!dateString)return null;
+ const d=new Date(dateString+'T12:00:00');
+ const js=d.getDay();
+ return js===0?6:js-1;
+}
+function substituteCandidates(leaveTeacher, dayIndex, start, end, target){
+ const targetStart=parseClock(start), targetEnd=parseClock(end);
+ if(targetStart===null || targetEnd===null)return [];
+
+ // Build one record per canonical faculty name. A substitute is eligible ONLY
+ // when that faculty member has no timetable class overlapping this exact day
+ // and period. We check the actual timetable rows using sameFaculty(), rather
+ // than a 4-letter key, so no busy teacher can slip through because of aliases.
+ const names=uniqueFacultyNames().filter(name=>!sameFaculty(name,leaveTeacher));
+ const candidates=[];
+ names.forEach(name=>{
+   const busy=data.some(x=>{
+     if(!x.teacher || x.dayIndex!==dayIndex || !withinUniversityHours(x))return false;
+     if(!sameFaculty(x.teacher,name))return false;
+     const s=parseClock(x.start), e=parseClock(x.end);
+     return s!==null && e!==null && s<targetEnd && e>targetStart;
+   });
+   if(busy)return;
+
+   const sameSubject=data.some(x=>sameFaculty(x.teacher,name)&&norm(x.subject)===norm(target.subject));
+   const sameProgram=data.some(x=>sameFaculty(x.teacher,name)&&norm(x.section)===norm(target.section));
+   const weeklyLoad=data.filter(x=>sameFaculty(x.teacher,name)&&withinUniversityHours(x)).length;
+   candidates.push({name,sameSubject,sameProgram,weeklyLoad});
+ });
+
+ // Free teachers first (all returned teachers are free); then prefer
+ // same subject/class and lower weekly teaching load.
+ return candidates.sort((a,b)=>
+   Number(b.sameSubject)-Number(a.sameSubject) ||
+   Number(b.sameProgram)-Number(a.sameProgram) ||
+   a.weeklyLoad-b.weeklyLoad ||
+   a.name.localeCompare(b.name,undefined,{sensitivity:'base'})
+ );
+}
+
+function uniqueSorted(values){
+ return [...new Set(values.filter(v=>String(v||'').trim()).map(v=>String(v).trim()))]
+   .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
+}
+function fillSelect(id, values, placeholder){
+ const el=document.getElementById(id); if(!el)return;
+ const current=el.value;
+ el.innerHTML=`<option value="">${esc(placeholder)}</option>`+
+   uniqueSorted(values).map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+ if([...el.options].some(o=>o.value===current))el.value=current;
+}
+function populateLeaveOptions(){
+ fillSelect('leaveTeacher',uniqueFacultyNames(),'Select faculty');
+ fillSelect('leaveSubject',data.map(x=>x.subject),'All courses / subjects');
+ fillSelect('leaveSection',data.map(x=>x.section),'All classes / sections');
+ fillSelect('leaveRoom',data.map(x=>x.room),'All rooms');
+ fillSelect('leaveTime',data.map(x=>`${x.start}–${x.end}`),'All time periods');
+}
+
+function findSubstitutes(){
+ const teacher=document.getElementById('leaveTeacher').value.trim();
+ const date=document.getElementById('leaveDate').value;
+ const subject=document.getElementById('leaveSubject').value.trim();
+ const section=document.getElementById('leaveSection').value.trim();
+ const room=document.getElementById('leaveRoom').value.trim();
+ const time=document.getElementById('leaveTime').value.trim();
+ const out=document.getElementById('leaveResults');
+ if(!teacher||!date){out.innerHTML='<div class="empty">Please enter the faculty name and leave date.</div>';return;}
+ const di=dateDayIndex(date);
+ const classes=data.filter(x=>{
+   if(!withinUniversityHours(x)||x.dayIndex!==di||!matchesLeaveName(x.teacher,teacher))return false;
+   if(subject&&x.subject!==subject)return false;
+   if(section&&x.section!==section)return false;
+   if(room&&x.room!==room)return false;
+   if(time&&`${x.start}–${x.end}`!==time)return false;
+   return true;
+ }).sort((a,b)=>parseClock(a.start)-parseClock(b.start));
+ if(!classes.length){out.innerHTML=`<div class="empty">No classes found for ${esc(teacher)} on ${esc(date)}.</div>`;return;}
+ out.innerHTML=classes.map((x,i)=>{
+   const candidates=substituteCandidates(teacher,di,x.start,x.end,x).slice(0,8);
+   return `<div class="item">
+    <strong>${esc(x.start)}–${esc(x.end)} · ${esc(x.subject)}</strong>
+    <div class="muted">${esc(x.section)} · Room ${esc(x.room||'—')} · Original Faculty: ${esc(x.teacher)}</div>
+    <div style="margin-top:10px"><b>Available substitute teachers:</b></div>
+    ${candidates.length?candidates.map((c,j)=>`
+      <div style="padding:8px 0;border-bottom:1px solid #eee">
+       <b>${j+1}. ${esc(c.name)}</b>
+       ${c.sameSubject?'<span class="tag">Same Subject</span>':''}
+       ${c.sameProgram?'<span class="tag">Same Class</span>':''}
+       <span class="tag">${c.weeklyLoad} weekly periods</span>
+      </div>`).join(''):'<div class="muted" style="margin-top:6px">No free faculty found for this period.</div>'}
+   </div>`;
+ }).join('');
+}
+function matchesLeaveName(t, entered){return sameFaculty(t,entered);}
+
+
+/* Naina V5.1 - Personal task/deadline manager */
+const TASKKEY='NainaPersonalTasksV1';
+let tasks=JSON.parse(localStorage.getItem(TASKKEY)||'[]');
+if(!Array.isArray(tasks)) tasks=[];
+
+function localDateOnly(d=new Date()){
+  return new Date(d.getFullYear(),d.getMonth(),d.getDate());
+}
+function taskDateFromInput(s){
+  if(!s) return null;
+  const p=String(s).split('-').map(Number);
+  if(p.length!==3 || p.some(Number.isNaN)) return null;
+  return new Date(p[0],p[1]-1,p[2]);
+}
+function taskTodayKey(){
+  const d=localDateOnly();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function taskDaysRemaining(deadline){
+  const d=taskDateFromInput(deadline), t=localDateOnly();
+  if(!d) return null;
+  return Math.round((d.getTime()-t.getTime())/86400000);
+}
+function taskColourClass(days, done){
+  if(done) return 'task-done';
+  if(days<0) return 'task-overdue';
+  if(days<=5) return 'task-red';
+  if(days<=19) return 'task-orange';
+  if(days<=29) return 'task-yellow';
+  return 'task-green';
+}
+function taskDaysLabel(days, done){
+  if(done) return '✓ Work completed';
+  if(days<0){
+    const n=Math.abs(days);
+    return `⚠️ Overdue by ${n} day${n===1?'':'s'}`;
+  }
+  if(days===0) return '🔴 Due today';
+  if(days===1) return '🔴 1 day remaining';
+  return `📅 ${days} days remaining`;
+}
+function saveTasks(){
+  localStorage.setItem(TASKKEY,JSON.stringify(tasks));
+}
+function taskSort(a,b){
+  if(!!a.done!==!!b.done) return a.done?1:-1;
+  const ad=taskDateFromInput(a.deadline)?.getTime()??Infinity;
+  const bd=taskDateFromInput(b.deadline)?.getTime()??Infinity;
+  return ad-bd;
+}
+function taskHtml(t, compact=false){
+  const days=taskDaysRemaining(t.deadline);
+  const cls=taskColourClass(days,t.done);
+  const deadline=taskDateFromInput(t.deadline);
+  const deadlineText=deadline ? deadline.toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'}) : 'No deadline';
+  const note=t.note ? `<div class="naina-task-meta">${esc(t.note)}</div>` : '';
+  const deleteBtn=(days<0 || t.done) ? `<button class="naina-task-delete-btn" onclick="deleteTask('${t.id}')">🗑️ Delete</button>` : '';
+  const doneBtn=t.done
+    ? `<button class="naina-task-done-btn" onclick="toggleTaskDone('${t.id}')">↩ Mark Pending</button>`
+    : `<button class="naina-task-done-btn" onclick="toggleTaskDone('${t.id}')">✓ Mark Done</button>`;
+  const editBtn=days>=0 && !t.done ? `<button class="naina-task-edit-btn" onclick="editTask('${t.id}')">✏️ Edit</button>` : '';
+  return `<div class="naina-task-card ${cls}">
+    <div class="naina-task-head">
+      <div>
+        <div class="naina-task-title">${esc(t.title)}</div>
+        <div class="naina-task-meta">Deadline: ${esc(deadlineText)}</div>
+        ${note}
+      </div>
+    </div>
+    <div class="naina-task-days">${taskDaysLabel(days,t.done)}</div>
+    ${compact?'':`<div class="naina-task-actions">${doneBtn}${editBtn}${deleteBtn}</div>`}
+    ${compact && (days<0 || t.done) ? `<div class="naina-task-actions">${deleteBtn}</div>` : ''}
+  </div>`;
+}
+function renderTaskLists(){
+  tasks=tasks.filter(t=>t && t.id && t.title);
+  tasks.sort(taskSort);
+  const pending=tasks.filter(t=>!t.done);
+  const home=document.getElementById('homeTasks');
+  if(home){
+    home.innerHTML=pending.length
+      ? `<div class="naina-task-list">${pending.map(t=>taskHtml(t,true)).join('')}</div>`
+      : `<div class="empty">No pending tasks. Add a task from the Tasks section.</div>`;
+  }
+  const list=document.getElementById('taskList');
+  if(list){
+    list.innerHTML=tasks.length
+      ? `<div class="naina-task-list">${tasks.map(t=>taskHtml(t,false)).join('')}</div>`
+      : `<div class="empty">No tasks added yet.</div>`;
+  }
+}
+function addTask(){
+  const title=(document.getElementById('taskTitle')?.value||'').trim();
+  const deadline=document.getElementById('taskDeadline')?.value||'';
+  const note=(document.getElementById('taskNote')?.value||'').trim();
+  if(!title){alert('Please enter the task/work name.');return;}
+  if(!deadline){alert('Please set a deadline.');return;}
+  const d=taskDateFromInput(deadline);
+  if(!d){alert('Please select a valid deadline.');return;}
+  tasks.push({id:'task_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),title,deadline,note,done:false,createdAt:new Date().toISOString()});
+  saveTasks();
+  document.getElementById('taskTitle').value='';
+  document.getElementById('taskDeadline').value='';
+  document.getElementById('taskNote').value='';
+  renderTaskLists();
+}
+function toggleTaskDone(id){
+  const t=tasks.find(x=>x.id===id);
+  if(!t)return;
+  t.done=!t.done;
+  t.completedAt=t.done?new Date().toISOString():null;
+  saveTasks();
+  renderTaskLists();
+}
+function deleteTask(id){
+  const t=tasks.find(x=>x.id===id);
+  if(!t)return;
+  if(!t.done && taskDaysRemaining(t.deadline)>=0){
+    alert('A task can be deleted after its due date, or after it is marked Done.');
+    return;
+  }
+  if(confirm(`Delete "${t.title}"?`)){
+    tasks=tasks.filter(x=>x.id!==id);
+    saveTasks();
+    renderTaskLists();
+  }
+}
+function editTask(id){
+  const t=tasks.find(x=>x.id===id);
+  if(!t)return;
+  const title=prompt('Task / Work name:',t.title);
+  if(title===null)return;
+  const deadline=prompt('Deadline (YYYY-MM-DD):',t.deadline);
+  if(deadline===null)return;
+  if(!taskDateFromInput(deadline)){alert('Invalid deadline. Use YYYY-MM-DD.');return;}
+  const note=prompt('Optional note:',t.note||'');
+  if(note===null)return;
+  t.title=title.trim()||t.title;
+  t.deadline=deadline;
+  t.note=note.trim();
+  saveTasks();
+  renderTaskLists();
+}
+document.addEventListener('DOMContentLoaded',function(){
+  const add=document.getElementById('addTaskBtn');
+  if(add)add.onclick=addTask;
+  const dl=document.getElementById('taskDeadline');
+  if(dl)dl.min=taskTodayKey();
+  renderTaskLists();
+});
+
+function render(){
+ document.getElementById('myName').value=myName;
+ document.getElementById('settingsName').value=myName;
+ renderLive();renderPersonal();renderAll();renderUpcoming();renderSheets();renderStats();populateLeaveOptions();renderTaskLists();
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+
+days.forEach((d,i)=>document.getElementById('myDay').insertAdjacentHTML('beforeend',`<option value="${i}">${d}</option>`));
+document.getElementById('myDay').value=String(todayIndex());
+document.getElementById('myDay').onchange=renderPersonal;
+document.getElementById('myName').oninput=e=>{myName=e.target.value;renderPersonal();renderLive();}
+document.getElementById('saveName').onclick=()=>{myName=document.getElementById('settingsName').value.trim();localStorage.setItem(NAMEKEY,myName);document.getElementById('myName').value=myName;render();alert('Faculty name saved.');};
+['filterTeacher','filterRoom','filterSection','filterCourse'].forEach(id=>{const el=document.getElementById(id);if(el)el.oninput=renderAll;});
+const masterDay=document.getElementById('masterDay'); if(masterDay) masterDay.onchange=renderAll;
+
+['upDay','upTeacher','upCourse','upSection','upRoom'].forEach(id=>{
+ const el=document.getElementById(id);
+ if(el){ el.addEventListener('input',renderUpcoming); el.addEventListener('change',renderUpcoming); }
+});
+
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+ document.getElementById(b.dataset.page).classList.add('active');
+ render();
+});
+
+document.getElementById('file').onchange=async e=>{
+ const file=e.target.files && e.target.files[0];
+ if(!file)return;
+ const status=document.getElementById('uploadStatus');
+ status.innerHTML='<span class="muted">Reading '+esc(file.name)+'…</span>';
+ try{
+  if(!window.NAINA_XLSX_READY) throw new Error('Excel engine is not initialized.');
+  const XLSX=await window.NAINA_XLSX_READY;
+  if(!XLSX) throw new Error('Excel engine is unavailable.');
+
+  const ext=(file.name||'').toLowerCase().split('.').pop();
+  if(!['xlsx','xls','csv'].includes(ext)) throw new Error('Please select an .xlsx, .xls or .csv file.');
+
+  let buf;
+  if(file.arrayBuffer){
+    buf=await file.arrayBuffer();
+  }else{
+    buf=await new Promise((resolve,reject)=>{
+      const fr=new FileReader();
+      fr.onload=()=>resolve(fr.result);
+      fr.onerror=()=>reject(new Error('The selected file could not be read by this device.'));
+      fr.readAsArrayBuffer(file);
+    });
+  }
+  if(!buf || !buf.byteLength) throw new Error('The selected file is empty or could not be read.');
+
+  let wb;
+  try{
+    wb=XLSX.read(buf,{type:'array',cellDates:false,raw:false});
+  }catch(readErr){
+    throw new Error('Excel file could not be opened. Please use the original .xlsx/.xls file, not a screenshot or PDF. '+readErr.message);
+  }
+  if(!wb.SheetNames || !wb.SheetNames.length) throw new Error('No worksheets were found in the Excel file.');
+
+  const parsed=[]; const infos=[];
+  const dayRx=/^(mon|monday|tue|tues|tuesday|wed|wednesday|thu|thur|thurs|thursday|fri|friday|sat|saturday)$/i;
+  const dmap={mon:0,monday:0,tue:1,tues:1,tuesday:1,wed:2,wednesday:2,thu:3,thur:3,thurs:3,thursday:3,fri:4,friday:4,sat:5,saturday:5};
+
+  for(const wsName of wb.SheetNames){
+    const ws=wb.Sheets[wsName];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+    if(!rows.length)continue;
+
+    let hi=-1;
+    for(let r=0;r<Math.min(rows.length,20);r++){
+      const first=String(rows[r]?.[0]??'').trim().replace(/\s+/g,' ').toLowerCase();
+      if(first==='day'){hi=r;break;}
+    }
+    if(hi<0)continue;
+
+    const top=rows.slice(0,Math.min(hi+1,10));
+    let room='',program='';
+    for(const row of top){
+      for(const v of row){
+        const raw=String(v??'').trim();
+        const clean=raw.replace(/\s+/g,' ');
+        const rm=clean.match(/Room\s*No\.?\s*:?\s*([A-Za-z0-9][A-Za-z0-9 -]*)/i);
+        if(rm && !room)room=rm[1].trim();
+        if(/FCMS/i.test(clean) && !program)program=clean;
+      }
+    }
+
+    const times=[];
+    (rows[hi]||[]).forEach((v,c)=>{
+      const raw=String(v??'').replace(/[–—−]/g,'-').replace(/\u00a0/g,' ').trim();
+      const tm=raw.match(/(\d{1,2})\s*:\s*(\d{2})\s*-\s*(\d{1,2})\s*:\s*(\d{2})/);
+      if(tm){
+        times.push([c,tm[1].padStart(2,'0')+':'+tm[2],tm[3].padStart(2,'0')+':'+tm[4]]);
+      }
+    });
+    if(!times.length){
+      infos.push({sheet:wsName,room,program,classes:0,warning:'No time periods detected'});
+      continue;
+    }
+
+    let count=0;
+    for(let r=hi+1;r<rows.length;r++){
+      const dayRaw=String(rows[r]?.[0]??'').trim().toLowerCase();
+      if(!dayRx.test(dayRaw))continue;
+
+      // The university workbook stores the subject on the day row and
+      // the teacher on the following row.
+      const teacherRow=rows[r+1]||[];
+      for(const [c,st,en] of times){
+        const subj=String(rows[r]?.[c]??'').trim().replace(/\s+/g,' ');
+        let fac=String(teacherRow[c]??'').trim().replace(/\s+/g,' ').replace(/^\(+|\)+$/g,'').trim();
+        if(!subj || /^lunch$/i.test(subj) || /^lunch$/i.test(fac))continue;
+
+        parsed.push({
+          day:dayRaw.slice(0,3).replace(/^./,x=>x.toUpperCase()),
+          dayIndex:dmap[dayRaw],
+          start:st,end:en,
+          subject:subj,teacher:fac,room,section:program,sheet:wsName
+        });
+        count++;
+      }
+      r++; // skip the faculty row
+    }
+    infos.push({sheet:wsName,room,program,classes:count});
+  }
+
+  if(!parsed.length){
+    throw new Error('The Excel file opened successfully, but no timetable cells were recognized. The sheet must contain a "Day" row followed by subject and faculty rows.');
+  }
+
+  data=parsed;
+  canonicalizeFacultyData();
+  sheetInfo=infos;
+  localStorage.setItem(KEY,JSON.stringify(data));
+  localStorage.setItem(KEY+'_sheets',JSON.stringify(sheetInfo));
+
+  const recognized=infos.filter(x=>x.classes>0).length;
+  status.innerHTML='<span class="ok">✓ Imported '+parsed.length+' classes from '+recognized+' timetable sheets.</span>';
+  render();
+ }catch(err){
+   console.error('Naina Excel import error:',err);
+   status.innerHTML='<span class="warn">Import failed: '+esc(err && err.message ? err.message : String(err))+'</span>';
+ }
+};
+
+document.getElementById('findSubstitutes').onclick=findSubstitutes;
+document.getElementById('resetLeaveFilters').onclick=()=>{['leaveTeacher','leaveSubject','leaveSection','leaveRoom','leaveTime'].forEach(id=>document.getElementById(id).value='');document.getElementById('leaveDate').value='';document.getElementById('leaveResults').innerHTML='<div class="empty">Select a faculty member and date.</div>';};
+document.getElementById('clearData').onclick=()=>{if(confirm('Clear the imported timetable?')){localStorage.removeItem(KEY);localStorage.removeItem(KEY+'_sheets');data=[];sheetInfo=[];render();}};
+render();
+setInterval(renderLive,15000);
+</script>
+
+<script>
+/* Naina V2.9 popup framework */
+(function(){
+  window.openNainaPopup = function(title, bodyHTML, wide){
+    const m=document.getElementById('nainaModal');
+    const c=document.getElementById('nainaModalCard');
+    document.getElementById('nainaModalTitle').textContent=title||'Naina';
+    document.getElementById('nainaModalBody').innerHTML=bodyHTML||'';
+    c.classList.toggle('wide', !!wide);
+    m.classList.add('open'); m.setAttribute('aria-hidden','false');
+    document.body.classList.add('modal-open');
+    setTimeout(()=>{ const f=m.querySelector('input,select,textarea,button'); if(f) f.focus(); },30);
+  };
+  window.closeNainaPopup = function(){
+    const m=document.getElementById('nainaModal');
+    m.classList.remove('open'); m.setAttribute('aria-hidden','true');
+    document.body.classList.remove('modal-open');
+  };
+  document.addEventListener('click',e=>{
+    const m=document.getElementById('nainaModal');
+    if(e.target===m) closeNainaPopup();
+  });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeNainaPopup(); });
+
+  // Convert major option/action cards into popup triggers while preserving their existing
+  // onclick behavior. Existing handlers remain the source of truth.
+  function wrapAction(el){
+    if(!el || el.dataset.popupWrapped) return;
+    const old=el.getAttribute('onclick');
+    if(!old) return;
+    // Avoid changing buttons that already explicitly manage a modal.
+    if(/openNainaPopup|closeNainaPopup/.test(old)) return;
+    el.dataset.popupWrapped='1';
+    el.dataset.originalOnclick=old;
+    el.setAttribute('onclick',
+      "window.__nainaOriginalAction=this.dataset.originalOnclick; " +
+      "try{ eval(window.__nainaOriginalAction); }catch(e){ console.error(e); }"
+    );
+  }
+  window.nainaWrapExistingActions=function(){
+    // Main navigation/options are converted to popup-style presentation where possible.
+    document.querySelectorAll('button[data-option], .option, .menu-item, .nav-item').forEach(wrapAction);
+  };
+})();
+</script>
+
+
+<script>
+/* Naina V3.1: make the Home/My Timetable/other option lists use the same
+   popup-list presentation as the Substitute Planner. */
+(function(){
+  window.nainaOpenListPopup = function(title, items, wide){
+    items = Array.isArray(items) ? items : [];
+    let body = '<div class="naina-popup-list">';
+    if(!items.length){
+      body += '<div class="popup-list-item"><div class="item-main"><div class="item-title">No options available</div><div class="item-sub">Import or select timetable data first.</div></div></div>';
+    } else {
+      items.forEach(function(x){
+        const safeTitle = String(x.title||'').replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]});
+        const safeSub = String(x.sub||'').replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]});
+        body += '<button class="popup-list-item" onclick="'+(x.action||'')+'"><div class="item-main"><div class="item-title">'+safeTitle+'</div>'+(safeSub?'<div class="item-sub">'+safeSub+'</div>':'')+'</div><div class="item-arrow">›</div></button>';
+      });
+    }
+    body += '</div>';
+    openNainaPopup(title, body, !!wide);
+  };
+
+  // When an existing Naina option/card opens a feature, keep the feature itself
+  // in a popup and present its child choices as a popup list.
+  window.nainaPopupFeatureList = function(title, options){
+    nainaOpenListPopup(title, options, false);
+  };
+
+  // Make cards/buttons that represent navigation options visibly behave as popup lists.
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('button, .card, .menu-item, .nav-item, [role="button"]').forEach(function(el){
+      const txt=(el.textContent||'').trim().toLowerCase();
+      if(!txt) return;
+      if(/home|my timetable|master timetable|upcoming|live classes|leave|substitute|academic|examination|research|publication|tasks|calendar|career|finance|documents|notes|backup|settings/.test(txt)){
+        el.classList.add('popup-option');
+      }
+    });
+  });
+})();
+</script>
+
+
+<script>
+/* Naina V3.2 - Teacher popup list for My Personal Timetable */
+(function(){
+  window.nainaShowPersonalTeacherList = function(){
+    let names = [];
+    try {
+      if(typeof uniqueFacultyNames === 'function') names = uniqueFacultyNames();
+    } catch(e) {}
+    if(!names.length){
+      try {
+        const rows = Array.isArray(window.timetableData) ? window.timetableData : [];
+        names = [...new Set(rows.map(r => r.faculty).filter(Boolean))].sort();
+      } catch(e) {}
+    }
+    const current = (typeof myName !== 'undefined' ? myName : (localStorage.getItem('NainaMyFacultyName') || ''));
+    const items = names.map(function(name){
+      const esc = String(name).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const selected = (typeof sameFaculty === 'function' && current && sameFaculty(name,current));
+      return {
+        title: String(name) + (selected ? ' ✓' : ''),
+        sub: selected ? 'Currently selected teacher' : 'Use this teacher for Personal Timetable',
+        action: "nainaSelectPersonalTeacher('" + esc + "')"
+      };
+    });
+    nainaOpenListPopup('Select Teacher — My Personal Timetable', items, false);
+  };
+
+  window.nainaSelectPersonalTeacher = function(name){
+    try {
+      localStorage.setItem('NainaMyFacultyName', name);
+      if(typeof myName !== 'undefined') myName = name;
+      if(typeof render === 'function') render();
+      else if(typeof renderApp === 'function') renderApp();
+    } catch(e) {
+      console.error(e);
+    }
+    closeNainaPopup();
+  };
+
+  // Intercept the common "My Personal Timetable" / teacher selector controls.
+  document.addEventListener('click', function(e){
+    const el = e.target.closest('button, .card, .option, .menu-item, [role="button"], label');
+    if(!el) return;
+    const text = (el.textContent || '').replace(/\s+/g,' ').trim().toLowerCase();
+    // IMPORTANT: Only the My Personal Timetable faculty selector is handled here.
+    // Do not intercept Leave & Substitute, Upcoming, Master Timetable, or other buttons.
+    if(el.id === 'myFacultyPopupButton'){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      nainaShowPersonalTeacherList();
+    }
+  }, true);
+})();
+</script>
+
+
+<script>
+/* Naina V3.2 Teacher Selector */
+(function(){
+  function addTeacherButton(){
+    const headings = Array.from(document.querySelectorAll('h1,h2,h3,h4,.section-title,.card-title'));
+    const heading = headings.find(x => /my personal timetable/i.test((x.textContent||'').trim()));
+    if(!heading || document.getElementById('nainaPersonalTeacherPopupBtn')) return;
+    const b=document.createElement('button');
+    b.id='nainaPersonalTeacherPopupBtn';
+    b.type='button';
+    b.textContent='👨‍🏫 Select Teacher';
+    b.className='btn primary popup-option';
+    b.style.margin='8px 0';
+    b.onclick=function(e){e.stopPropagation();nainaShowPersonalTeacherList();};
+    heading.parentNode.insertBefore(b, heading.nextSibling);
+  }
+  document.addEventListener('DOMContentLoaded', addTeacherButton);
+  setTimeout(addTeacherButton, 500);
+  setTimeout(addTeacherButton, 1500);
+})();
+</script>
+
+
+<script>
+/* Naina V3.4 - My Personal Timetable Faculty Name popup list */
+(function(){
+  function facultyList(){
+    let names=[];
+    try{
+      if(typeof uniqueFacultyNames==='function') names=uniqueFacultyNames();
+    }catch(e){}
+    if(!names.length){
+      try{
+        const raw=localStorage.getItem('NainaSmartTimetableV2');
+        const d=raw?JSON.parse(raw):[];
+        const arr=Array.isArray(d)?d:(d.rows||d.data||[]);
+        names=[...new Set(arr.map(x=>x.teacher||x.faculty).filter(Boolean))];
+      }catch(e){}
+    }
+    return names.sort((a,b)=>String(a).localeCompare(String(b),undefined,{sensitivity:'base'}));
+  }
+
+  function openFacultyPicker(){
+    const current=(typeof myName!=='undefined' && myName) ? myName : (localStorage.getItem('NainaMyFacultyName')||'');
+    const names=facultyList();
+
+    const items=names.map(function(name){
+      const active=(typeof sameFaculty==='function') ? sameFaculty(name,current) : String(name)===String(current);
+      const safe=String(name).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return {
+        title:String(name)+(active?' ✓':''),
+        sub:active?'Currently selected faculty':'Select this faculty',
+        action:"nainaChooseMyFaculty('"+safe+"')"
+      };
+    });
+
+    if(typeof nainaOpenListPopup==='function'){
+      nainaOpenListPopup('Select Faculty Name',items,false);
+    }else if(typeof openNainaPopup==='function'){
+      openNainaPopup('Select Faculty Name',
+        '<div class="naina-popup-list">'+
+        items.map(x=>'<button class="popup-list-item" onclick="'+x.action+'"><div class="item-main"><div class="item-title">'+x.title+'</div><div class="item-sub">'+x.sub+'</div></div><div class="item-arrow">›</div></button>').join('')+
+        '</div>',false);
+    }
+  }
+
+  window.nainaChooseMyFaculty=function(name){
+    try{
+      localStorage.setItem('NainaMyFacultyName',name);
+      if(typeof myName!=='undefined') myName=name;
+
+      const hidden=document.getElementById('myName');
+      if(hidden) hidden.value=name;
+
+      const display=document.getElementById('myFacultyPopupValue');
+      if(display) display.textContent=name;
+
+      if(typeof renderPersonal==='function') renderPersonal();
+      if(typeof renderLive==='function') renderLive();
+      if(typeof render==='function') render();
+    }catch(e){console.error(e);}
+    if(typeof closeNainaPopup==='function') closeNainaPopup();
+  };
+
+  function syncFacultyButton(){
+    const current=(typeof myName!=='undefined' && myName) ? myName : (localStorage.getItem('NainaMyFacultyName')||'Dr Atul');
+    const hidden=document.getElementById('myName');
+    const display=document.getElementById('myFacultyPopupValue');
+    if(hidden) hidden.value=current;
+    if(display) display.textContent=current||'Select Faculty';
+  }
+
+  function install(){
+    const b=document.getElementById('myFacultyPopupButton');
+    if(b && !b.dataset.popupInstalled){
+      b.dataset.popupInstalled='1';
+      b.onclick=function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        openFacultyPicker();
+      };
+    }
+    syncFacultyButton();
+  }
+
+  document.addEventListener('DOMContentLoaded',install);
+  setTimeout(install,300);
+  setTimeout(install,1000);
+  setTimeout(install,2000);
+})();
+</script>
+
+
+<script>
+/* Naina V3.7 - simple responsive Master Timetable popup selectors */
+(function(){
+  function unique(a){
+    return [...new Set(a.filter(function(x){return x!==undefined&&x!==null&&String(x).trim()!=='';}))]
+      .sort(function(a,b){return String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});});
+  }
+  function list(type){
+    if(type==='day') return ['All Days','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    if(type==='faculty'){
+      try{if(typeof uniqueFacultyNames==='function'){var a=uniqueFacultyNames();if(a.length)return ['All Faculty'].concat(a);}}catch(e){}
+      return ['All Faculty'].concat(unique((data||[]).map(function(x){return x.teacher;})));
+    }
+    if(type==='course') return ['All Courses'].concat(unique((data||[]).map(function(x){return x.subject;})));
+    if(type==='class') return ['All Classes'].concat(unique((data||[]).map(function(x){return x.section;})));
+    if(type==='room') return ['All Rooms'].concat(unique((data||[]).map(function(x){return x.room;})));
+    return [];
+  }
+  function field(type){
+    return {day:'masterDay',faculty:'filterTeacher',course:'filterCourse',class:'filterSection',room:'filterRoom'}[type];
+  }
+  function text(type){
+    return {day:'nainaDayText',faculty:'nainaFacultyText',course:'nainaCourseText',class:'nainaClassText',room:'nainaRoomText'}[type];
+  }
+  function choose(type,value){
+    var el=document.getElementById(field(type));
+    if(!el)return;
+    if(type==='day'){
+      var idx=list('day').indexOf(value);
+      el.value=idx<=0?'all':String(idx-1);
+    }else{
+      var first=list(type)[0];
+      el.value=value===first?'':value;
+    }
+    var t=document.getElementById(text(type));
+    if(t)t.textContent=value;
+    if(typeof renderAll==='function')renderAll();
+  }
+  function open(type){
+    var options=list(type);
+    var current=document.getElementById(field(type))?.value||'';
+    if(type==='day') current=current===''||current==='all'?'All Days':list('day')[Number(current)+1]||'All Days';
+    else if(!current)current=options[0];
+
+    var items=options.map(function(v){
+      var active=String(v)===String(current);
+      var safe=String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return {
+        title:String(v)+(active?' ✓':''),
+        sub:active?'Currently selected':'Select '+({'day':'day','faculty':'faculty name','course':'course / subject','class':'class / section','room':'room number'}[type]),
+        action:"nainaMasterChoose('"+type+"','"+safe+"')"
+      };
+    });
+    window.nainaMasterChoose=function(t,v){
+      choose(t,v);
+      if(typeof closeNainaPopup==='function')closeNainaPopup();
+    };
+    if(typeof nainaOpenListPopup==='function')nainaOpenListPopup(
+      ({day:'Select Day',faculty:'Select Faculty Name',course:'Select Course / Subject',class:'Select Class / Section',room:'Select Room Number'}[type]),
+      items,false
+    );
+    else if(typeof openNainaPopup==='function')openNainaPopup(
+      'Select '+type,
+      items.map(function(x){return '<button class="popup-list-item" onclick="'+x.action+'"><div class="item-main"><div class="item-title">'+x.title+'</div><div class="item-sub">'+x.sub+'</div></div><div class="item-arrow">›</div></button>';}).join(''),
+      false
+    );
+  }
+  function setup(){
+    [['nainaDayBtn','day'],['nainaFacultyBtn','faculty'],['nainaCourseBtn','course'],['nainaClassBtn','class'],['nainaRoomBtn','room']]
+      .forEach(function(pair){
+        var b=document.getElementById(pair[0]);
+        if(b)b.onclick=function(){open(pair[1]);};
+      });
+  }
+  document.addEventListener('DOMContentLoaded',setup);
+  setTimeout(setup,500);
+})();
+</script>
+
+<script>
+/* Naina V3.8 - direct popup selectors for All Upcoming Classes.
+   No MutationObserver or DOM scanning is used. */
+(function(){
+  function uniq(a){
+    return [...new Set(a.filter(function(x){return x!==undefined&&x!==null&&String(x).trim()!=='';}))]
+      .sort(function(a,b){return String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});});
+  }
+  function opts(type){
+    if(type==='day') return ['All Days','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    if(type==='faculty'){
+      try{if(typeof uniqueFacultyNames==='function'){var a=uniqueFacultyNames();if(a.length)return ['All Faculty'].concat(a);}}catch(e){}
+      return ['All Faculty'].concat(uniq((data||[]).map(function(x){return x.teacher;})));
+    }
+    if(type==='course') return ['All Courses'].concat(uniq((data||[]).map(function(x){return x.subject;})));
+    if(type==='class') return ['All Classes'].concat(uniq((data||[]).map(function(x){return x.section;})));
+    if(type==='room') return ['All Rooms'].concat(uniq((data||[]).map(function(x){return x.room;})));
+    return [];
+  }
+  var field={day:'upDay',faculty:'upTeacher',course:'upCourse',class:'upSection',room:'upRoom'};
+  var display={day:'upDayText',faculty:'upFacultyText',course:'upCourseText',class:'upClassText',room:'upRoomText'};
+  var button={day:'upDayPopup',faculty:'upFacultyPopup',course:'upCoursePopup',class:'upClassPopup',room:'upRoomPopup'};
+  var title={day:'Select Day',faculty:'Select Teaching Faculty',course:'Select Course / Subject',class:'Select Class / Section',room:'Select Room Number'};
+
+  function current(type){
+    var el=document.getElementById(field[type]), v=el?el.value:'';
+    if(type==='day'){
+      if(v==='all'||!v)return 'All Days';
+      return opts('day')[Number(v)+1]||'All Days';
+    }
+    return v||opts(type)[0];
+  }
+
+  window.nainaUpcomingPick=function(type,value){
+    var el=document.getElementById(field[type]);
+    if(!el)return;
+    if(type==='day'){
+      var i=opts('day').indexOf(value);
+      el.value=i<=0?'all':String(i-1);
+    }else{
+      el.value=(value===opts(type)[0]?'':value);
+    }
+    var d=document.getElementById(display[type]);
+    if(d)d.textContent=value;
+    if(typeof renderUpcoming==='function')renderUpcoming();
+    if(typeof closeNainaPopup==='function')closeNainaPopup();
+  };
+
+  function open(type){
+    var currentValue=current(type);
+    var items=opts(type).map(function(v){
+      var active=String(v)===String(currentValue);
+      var safe=String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return {
+        title:String(v)+(active?' ✓':''),
+        sub:active?'Currently selected':'Select '+String(title[type]).replace(/^Select /i,'').toLowerCase(),
+        action:"nainaUpcomingPick('"+type+"','"+safe+"')"
+      };
+    });
+    if(typeof nainaOpenListPopup==='function'){
+      nainaOpenListPopup(title[type],items,false);
+    }
+  }
+
+  function setup(){
+    Object.keys(button).forEach(function(type){
+      var b=document.getElementById(button[type]);
+      if(b && !b.dataset.nainaPopup){
+        b.dataset.nainaPopup='1';
+        b.onclick=function(e){e.preventDefault();e.stopPropagation();open(type);};
+      }
+      var d=document.getElementById(display[type]);
+      if(d)d.textContent=current(type);
+    });
+  }
+  document.addEventListener('DOMContentLoaded',setup);
+  setTimeout(setup,500);
+})();
+</script>
+
+<script>
+/* Naina V3.9 - prevent popup selector conflicts with Substitute Planner */
+(function(){
+  function protectSubstituteButtons(){
+    ['findSubstitutes','resetLeaveFilters'].forEach(function(id){
+      var b=document.getElementById(id);
+      if(!b || b.dataset.nainaProtected) return;
+      b.dataset.nainaProtected='1';
+      b.addEventListener('click',function(e){ e.stopPropagation(); },false);
+    });
+  }
+  document.addEventListener('DOMContentLoaded',protectSubstituteButtons);
+  setTimeout(protectSubstituteButtons,500);
+})();
+</script>
+
+<script>
+/* Naina V5.0 - Exact timetable date-wise class count with 12-hour Excel time fix; versioned storage prevents stale old timetable data */
+(function(){
+  var statsSelectedDate = new Date();
+  statsSelectedDate.setHours(12,0,0,0);
+  var statsFaculty = 'Dr Atul';
+  var statsClass = '';
+
+  function pad(n){return String(n).padStart(2,'0');}
+  function iso(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+  function fmtDate(d){return d.toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'});}
+  function fmtMonth(d){return d.toLocaleDateString(undefined,{month:'long',year:'numeric'});}
+  function mondayOf(d){
+    var x=new Date(d); x.setHours(12,0,0,0);
+    var day=x.getDay(); var diff=(day===0?-6:1-day);
+    x.setDate(x.getDate()+diff); return x;
+  }
+  function sundayOf(d){var x=mondayOf(d);x.setDate(x.getDate()+6);return x;}
+  function monthStart(d){return new Date(d.getFullYear(),d.getMonth(),1,12);}
+  function monthEnd(d){return new Date(d.getFullYear(),d.getMonth()+1,0,12);}
+  function weekdayIndex(date){var n=date.getDay();return n===0?6:n-1;}
+  function cleanFaculty(s){
+    try{if(typeof facultyCanonical==='function')return facultyCanonical(s);}
+    catch(e){}
+    return String(s||'').trim();
+  }
+  function sameFacultyLocal(a,b){
+    if(!a||!b)return false;
+    try{if(typeof sameFaculty==='function')return sameFaculty(a,b);}catch(e){}
+    return String(a).replace(/[^a-z]/gi,'').slice(0,4).toLowerCase()===
+           String(b).replace(/[^a-z]/gi,'').slice(0,4).toLowerCase();
+  }
+  function inHours(x){
+    try{if(typeof withinUniversityHours==='function')return withinUniversityHours(x);}catch(e){}
+    function mins(v){var p=String(v||'').match(/(\d{1,2}):(\d{2})/);return p?Number(p[1])*60+Number(p[2]):9999;}
+    return mins(x.start)>=540 && mins(x.end)<=1020;
+  }
+  function baseRows(){
+    return (typeof data!=='undefined' && Array.isArray(data)) ? data : [];
+  }
+  function filteredRows(){
+    return baseRows().filter(function(x){
+      if(!inHours(x))return false;
+      if(statsFaculty && !sameFacultyLocal(x.teacher,statsFaculty))return false;
+      if(statsClass && String(x.section||'')!==String(statsClass))return false;
+      return true;
+    });
+  }
+  function rowsForDate(d){
+    var wi=weekdayIndex(d);
+    return filteredRows().filter(function(x){return Number(x.dayIndex)===wi;});
+  }
+  function allFacultyOptions(){
+    try{if(typeof uniqueFacultyNames==='function'){var a=uniqueFacultyNames();if(a.length)return ['All Faculty'].concat(a);}}catch(e){}
+    var a=[...new Set(baseRows().map(x=>cleanFaculty(x.teacher)).filter(Boolean))];
+    return ['All Faculty'].concat(a.sort());
+  }
+  function classOptions(){
+    var a=[...new Set(baseRows().map(x=>x.section).filter(Boolean))];
+    return ['All Classes'].concat(a.sort());
+  }
+
+  function refreshStats(){
+    /*
+     * Counts are based on the actual recurring timetable records:
+     * - Daily = the exact selected calendar date
+     * - Weekly = every calendar date Monday-Saturday in that selected week
+     * - Monthly = every calendar date Monday-Saturday in that selected month
+     * Each timetable teaching period is counted as one class. Lunch/blank periods
+     * and anything outside 09:00-17:00 are excluded.
+     */
+    var daily=rowsForDate(statsSelectedDate);
+    var mon=mondayOf(statsSelectedDate), sun=sundayOf(statsSelectedDate);
+    var weekly=0;
+    var dailyRows=[];
+    for(var d=new Date(mon);d<=sun;d.setDate(d.getDate()+1)){
+      var dayRows=rowsForDate(d);
+      var c=dayRows.length;
+      weekly+=c;
+      dailyRows.push({date:new Date(d),count:c});
+    }
+
+    var ms=monthStart(statsSelectedDate), me=monthEnd(statsSelectedDate);
+    var monthly=0, monthDailyRows=[];
+    for(var md=new Date(ms);md<=me;md.setDate(md.getDate()+1)){
+      var mrows=rowsForDate(md);
+      var mc=mrows.length;
+      monthly+=mc;
+      monthDailyRows.push({date:new Date(md),count:mc});
+    }
+
+    document.getElementById('dailyClassCount').textContent=daily.length;
+    document.getElementById('dailyClassDate').textContent=fmtDate(statsSelectedDate);
+    document.getElementById('weeklyClassCount').textContent=weekly;
+    document.getElementById('weeklyClassRange').textContent=fmtDate(mon)+' – '+fmtDate(sun);
+    document.getElementById('monthlyClassCount').textContent=monthly;
+    document.getElementById('monthlyClassName').textContent=fmtMonth(statsSelectedDate);
+
+    document.getElementById('statsDateText').textContent=fmtDate(statsSelectedDate);
+    document.getElementById('statsFacultyText').textContent=statsFaculty||'All Faculty';
+    document.getElementById('statsClassText').textContent=statsClass||'All Classes';
+
+    /* Exact selected date — this is the authoritative daily count. */
+    var detailRows=daily.slice().sort(function(a,b){return parseClock(a.start)-parseClock(b.start);});
+    document.getElementById('statsDateWise').innerHTML=
+      '<table class="naina-stat-table"><thead><tr><th>Selected Date</th><th>Day</th><th>Total Classes</th></tr></thead><tbody>'+ 
+      '<tr><td>'+fmtDate(statsSelectedDate)+'</td><td>'+statsSelectedDate.toLocaleDateString(undefined,{weekday:'long'})+'</td><td><b>'+daily.length+'</b></td></tr>'+ 
+      '</tbody></table>'+
+      '<div style="margin-top:10px"><b>Classes on selected date</b></div>'+
+      '<table class="naina-stat-table"><thead><tr><th>Time</th><th>Course</th><th>Class / Section</th><th>Room</th></tr></thead><tbody>'+
+      (detailRows.length?detailRows.map(function(x){return '<tr><td>'+String(x.start)+'–'+String(x.end)+'</td><td>'+String(x.subject||'')+'</td><td>'+String(x.section||'')+'</td><td>'+String(x.room||'')+'</td></tr>';}).join(''):'<tr><td colspan="4">No classes</td></tr>')+
+      '</tbody></table>'+
+      '<div class="muted" style="margin-top:8px">Count = every teaching period assigned to the selected faculty across all courses/sections. Lunch, blank cells and periods outside 09:00–17:00 are excluded.</div>';
+
+    /* Weekly: exact calendar dates, followed by the weekly total. */
+    document.getElementById('statsWeekly').innerHTML=
+      '<table class="naina-stat-table"><thead><tr><th>Date</th><th>Day</th><th>Classes</th></tr></thead><tbody>'+ 
+      dailyRows.map(function(r){
+        return '<tr><td>'+fmtDate(r.date)+'</td><td>'+r.date.toLocaleDateString(undefined,{weekday:'long'})+'</td><td>'+r.count+'</td></tr>';
+      }).join('')+
+      '<tr><th colspan="2">TOTAL FOR SELECTED WEEK</th><th>'+weekly+'</th></tr></tbody></table>';
+
+    /* Monthly: every calendar date in the selected month, followed by monthly total. */
+    document.getElementById('statsMonthly').innerHTML=
+      '<table class="naina-stat-table"><thead><tr><th>Date</th><th>Day</th><th>Classes</th></tr></thead><tbody>'+ 
+      monthDailyRows.map(function(r){
+        return '<tr><td>'+fmtDate(r.date)+'</td><td>'+r.date.toLocaleDateString(undefined,{weekday:'long'})+'</td><td>'+r.count+'</td></tr>';
+      }).join('')+
+      '<tr><th colspan="2">TOTAL FOR SELECTED MONTH</th><th>'+monthly+'</th></tr></tbody></table>';
+
+    /* Timetable pattern (independent of calendar date) for quick verification. */
+    var pattern= [
+      {i:0,n:'Monday'},{i:1,n:'Tuesday'},{i:2,n:'Wednesday'},
+      {i:3,n:'Thursday'},{i:4,n:'Friday'},{i:5,n:'Saturday'}
+    ];
+    var patternTotal=0;
+    var patternHtml=pattern.map(function(p){
+      var c=filteredRows().filter(function(x){return Number(x.dayIndex)===p.i;}).length;
+      patternTotal+=c;
+      return '<tr><td>'+p.n+'</td><td>'+c+'</td></tr>';
+    }).join('');
+    var patternEl=document.getElementById('statsPattern');
+    if(patternEl){
+      patternEl.innerHTML='<table class="naina-stat-table"><thead><tr><th>Regular Timetable Day</th><th>Classes</th></tr></thead><tbody>'+patternHtml+'<tr><th>Weekly Timetable Total</th><th>'+patternTotal+'</th></tr></tbody></table>';
+    }
+  }
+
+  function openDatePicker(){
+    var items=[];
+    // Offer useful quick date choices plus an HTML date input inside popup.
+    ['Today','Tomorrow','Previous Day','Next Day'].forEach(function(label,i){
+      items.push({
+        title:label,
+        sub:i===0?fmtDate(new Date()):'Select '+label.toLowerCase(),
+        action:"nainaStatsDateQuick('"+label+"')"
+      });
+    });
+    var body='<div style="margin-bottom:12px"><label style="font-weight:700">Choose exact date</label><input id="nainaStatsDateInput" type="date" value="'+iso(statsSelectedDate)+'" style="width:100%;padding:13px;border-radius:12px;border:1px solid #ccc;margin-top:7px"></div>'+
+      '<div class="naina-popup-list">'+items.map(function(x){return '<button class="popup-list-item" onclick="'+x.action+'"><div class="item-main"><div class="item-title">'+x.title+'</div><div class="item-sub">'+x.sub+'</div></div><div class="item-arrow">›</div></button>';}).join('')+'</div>'+
+      '<button class="btn primary" style="width:100%;margin-top:10px" onclick="nainaStatsApplyDate()">Apply Date</button>';
+    openNainaPopup('Select Date',body,false);
+  }
+  window.nainaStatsApplyDate=function(){
+    var v=document.getElementById('nainaStatsDateInput')?.value;
+    if(v){
+      var p=v.split('-');statsSelectedDate=new Date(Number(p[0]),Number(p[1])-1,Number(p[2]),12);
+      refreshStats();closeNainaPopup();
+    }
+  };
+  window.nainaStatsDateQuick=function(label){
+    var d=new Date(statsSelectedDate);d.setHours(12,0,0,0);
+    if(label==='Today')d=new Date();
+    if(label==='Tomorrow')d.setDate(d.getDate()+1);
+    if(label==='Previous Day')d.setDate(d.getDate()-1);
+    if(label==='Next Day')d.setDate(d.getDate()+1);
+    d.setHours(12,0,0,0);statsSelectedDate=d;refreshStats();closeNainaPopup();
+  };
+  function openFaculty(){
+    var opts=allFacultyOptions();
+    var items=opts.map(function(v){
+      var active=(v==='All Faculty'&&!statsFaculty)||(v!=='All Faculty'&&sameFacultyLocal(v,statsFaculty));
+      var safe=String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return {title:v+(active?' ✓':''),sub:active?'Currently selected':'Select faculty',action:"nainaStatsPickFaculty('"+safe+"')"};
+    });
+    window.nainaStatsPickFaculty=function(v){statsFaculty=v==='All Faculty'?'':v;refreshStats();closeNainaPopup();};
+    nainaOpenListPopup('Select Faculty',items,false);
+  }
+  function openClass(){
+    var opts=classOptions();
+    var items=opts.map(function(v){
+      var active=(v==='All Classes'&&!statsClass)||v===statsClass;
+      var safe=String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return {title:v+(active?' ✓':''),sub:active?'Currently selected':'Select class / section',action:"nainaStatsPickClass('"+safe+"')"};
+    });
+    window.nainaStatsPickClass=function(v){statsClass=v==='All Classes'?'':v;refreshStats();closeNainaPopup();};
+    nainaOpenListPopup('Select Class / Section',items,false);
+  }
+  function setupStats(){
+    var b=document.getElementById('statsDateBtn');if(b)b.onclick=openDatePicker;
+    b=document.getElementById('statsFacultyBtn');if(b)b.onclick=openFaculty;
+    b=document.getElementById('statsClassBtn');if(b)b.onclick=openClass;
+    if(document.getElementById('classstats'))refreshStats();
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(setupStats,300);});
+})();
+</script>
+
+
+<script>
+/* Naina V4.2 - mobile home-screen installation */
+(function(){
+  let deferredPrompt=null;
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();
+    deferredPrompt=e;
+    const b=document.getElementById('installNainaBtn');
+    const s=document.getElementById('installNainaStatus');
+    if(b)b.style.display='block';
+    if(s)s.textContent='Naina is ready to be installed as a mobile app.';
+  });
+  window.addEventListener('appinstalled',function(){
+    deferredPrompt=null;
+    const s=document.getElementById('installNainaStatus');
+    if(s)s.textContent='Naina has been added to your home screen.';
+  });
+  document.addEventListener('DOMContentLoaded',function(){
+    const b=document.getElementById('installNainaBtn');
+    const s=document.getElementById('installNainaStatus');
+    if(!b)return;
+    b.onclick=async function(){
+      if(deferredPrompt){
+        deferredPrompt.prompt();
+        try{await deferredPrompt.userChoice;}catch(e){}
+        deferredPrompt=null;
+      }else{
+        if(s)s.textContent='If the install button is unavailable, open Naina in Chrome and use ⋮ → Add to Home screen / Install app. Naina must be hosted on HTTPS for full PWA installation.';
+      }
+    };
+    b.style.display='block';
+  });
+  if('serviceWorker' in navigator && location.protocol!=='file:' && location.protocol!=='content:'){
+    window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(()=>{});});
+  }
+})();
+</script>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+</script>
+
+</body>
+</html>
